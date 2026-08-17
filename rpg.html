@@ -1,0 +1,3372 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>무명행 — 혈로(血路)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600;800&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+ *  무명행(無名行) — 혈로(血路)
+ *  뱀파이어 서바이버류 무협 액션 RPG
+ *  index-3.html「군림천하」의 설정집을 승계한다.
+ *  카드가 아니라 능력치(能力値)와 경지(境地)로 무한히 자란다.
+ *  외부 에셋 0 — 한자 글리프와 절차생성 벡터로 모든 것을 그린다.
+ * ============================================================ */
+
+:root {
+  --paper: #f0e4ca;
+  --paper-2: #e6d8b8;
+  --paper-3: #d8c498;
+  --ink: #1a1410;
+  --ink-2: #3a2e22;
+  --ink-soft: #5a4a3a;
+
+  --plum: #b03050;
+  --plum-dark: #7a1f38;
+  --plum-light: #d4567a;
+  --gold: #b08838;
+  --gold-light: #d4a850;
+  --gold-dark: #6a4a18;
+
+  --jeongpa: #4a7a8c;
+  --cheonma: #b03048;
+  --binggung: #4a90b8;
+  --hyeolgyo: #8a1828;
+  --sapa: #7a6a3a;
+  --sorim: #a06830;
+
+  --bg-0: #14100c;
+  --bg-1: #221a12;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%; width: 100%; overflow: hidden;
+  background: var(--bg-0); color: var(--ink);
+  font-family: 'Noto Serif KR', serif;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none; -webkit-user-select: none;
+  overscroll-behavior: none;
+}
+.hanja { font-family: 'Ma Shan Zheng', 'Noto Serif KR', serif; }
+
+/* ============================================================
+ *  전투 캔버스
+ * ============================================================ */
+#cv { position: fixed; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; }
+
+/* ============================================================
+ *  런 HUD
+ * ============================================================ */
+#hud {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+  padding: calc(6px + env(safe-area-inset-top)) 10px 6px;
+  pointer-events: none; display: none;
+}
+#hud.on { display: block; }
+#xp-bar {
+  height: 8px; background: rgba(0,0,0,0.55); border: 1px solid rgba(212,168,80,0.55); overflow: hidden;
+}
+#xp-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #3a6a8a, #7ac0e0); transition: width 0.1s linear; }
+#hud-row {
+  display: flex; align-items: center; gap: 8px; margin-top: 5px;
+  font-size: 11px; color: var(--paper); text-shadow: 0 1px 3px #000;
+}
+#hud-lv { font-weight: 600; color: var(--gold-light); }
+#hud-time { font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 600; margin-left: auto; }
+#hud-kill { opacity: 0.85; }
+#hud-mission {
+  margin-top: 4px; font-size: 10.5px; color: var(--gold-light);
+  text-shadow: 0 1px 3px #000; line-height: 1.6;
+}
+#hud-arts {
+  position: fixed; left: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); z-index: 10;
+  display: none; flex-direction: column; gap: 3px; pointer-events: none;
+}
+#hud-arts.on { display: flex; }
+.slot-chip {
+  font-size: 10px; color: var(--paper); background: rgba(20,14,8,0.72);
+  border-left: 3px solid var(--gold); padding: 2px 6px; text-shadow: 0 1px 2px #000;
+}
+.slot-chip.sim { border-left-color: var(--jeongpa); }
+.slot-chip.evo { border-left-color: var(--plum-light); color: var(--gold-light); }
+
+#pause-btn {
+  position: fixed; top: calc(8px + env(safe-area-inset-top)); right: 8px; z-index: 12;
+  width: 34px; height: 34px; display: none; align-items: center; justify-content: center;
+  background: rgba(20,14,8,0.6); border: 1px solid rgba(212,168,80,0.5);
+  color: var(--paper); font-size: 15px; cursor: pointer;
+}
+#pause-btn.on { display: flex; }
+
+/* 보스 배너 */
+#boss-banner {
+  position: fixed; top: 22%; left: 0; right: 0; z-index: 11;
+  text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.4s;
+}
+#boss-banner.on { opacity: 1; }
+#boss-banner .bb-glyph {
+  font-family: 'Ma Shan Zheng', serif; font-size: 64px; color: var(--plum);
+  text-shadow: 0 0 24px rgba(176,48,80,0.8), 0 2px 6px #000; line-height: 1;
+}
+#boss-banner .bb-name { font-size: 17px; font-weight: 600; color: var(--paper); text-shadow: 0 2px 6px #000; margin-top: 4px; }
+#boss-banner .bb-line { font-size: 12px; color: var(--gold-light); text-shadow: 0 2px 6px #000; margin-top: 6px; padding: 0 24px; line-height: 1.7; }
+
+/* 보스 체력 바 */
+#boss-hp {
+  position: fixed; top: calc(52px + env(safe-area-inset-top)); left: 12px; right: 12px; z-index: 10;
+  display: none; pointer-events: none;
+}
+#boss-hp.on { display: block; }
+#boss-hp .bh-name { font-size: 11px; color: var(--plum-light); text-shadow: 0 1px 3px #000; margin-bottom: 2px; }
+#boss-hp .bh-bar { height: 7px; background: rgba(0,0,0,0.6); border: 1px solid rgba(176,48,80,0.7); }
+#boss-hp .bh-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #7a1f28, #d4567a); transition: width 0.15s linear; }
+
+/* 데미지/획득 플로터는 캔버스에 직접 그린다 */
+
+/* 가상 조이스틱 */
+#stick {
+  position: fixed; z-index: 9; display: none; pointer-events: none;
+  width: 110px; height: 110px; margin: -55px 0 0 -55px;
+  border: 2px solid rgba(240,228,202,0.28); border-radius: 50%;
+}
+#stick.on { display: block; }
+#stick-knob {
+  position: absolute; left: 50%; top: 50%; width: 42px; height: 42px; margin: -21px 0 0 -21px;
+  background: rgba(240,228,202,0.34); border: 1px solid rgba(240,228,202,0.55); border-radius: 50%;
+}
+
+/* ============================================================
+ *  화면(종이 UI)
+ * ============================================================ */
+.screen {
+  position: fixed; inset: 0; z-index: 20; display: none;
+  align-items: flex-start; justify-content: center;
+  padding: 16px 12px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  background: rgba(16,11,7,0.86);
+}
+.screen.on { display: flex; }
+.sheet {
+  width: 100%; max-width: 460px; margin: auto 0;
+  background: radial-gradient(ellipse at 25% 0%, rgba(255,255,255,0.3), transparent 60%),
+              linear-gradient(165deg, var(--paper) 0%, var(--paper-2) 58%, var(--paper-3) 100%);
+  border: 1px solid var(--gold-dark); box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+  padding: 16px; position: relative;
+}
+.sheet::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.3;
+  background-image: repeating-linear-gradient(0deg, rgba(120,90,50,0.05) 0 1px, transparent 1px 3px),
+                    repeating-linear-gradient(90deg, rgba(120,90,50,0.04) 0 1px, transparent 1px 4px);
+}
+.sheet > * { position: relative; }
+
+h1.title {
+  font-family: 'Ma Shan Zheng', serif; font-size: 38px; text-align: center;
+  letter-spacing: 6px; line-height: 1.1;
+}
+.subtitle { text-align: center; font-size: 11px; color: var(--ink-soft); letter-spacing: 4px; margin-top: 2px; }
+.tagline { text-align: center; font-size: 12px; color: var(--plum-dark); line-height: 1.8; margin: 10px 0 14px; }
+h2.head {
+  font-size: 11px; color: var(--ink-soft); letter-spacing: 3px; font-weight: 400;
+  border-bottom: 1px solid rgba(120,90,50,0.35); padding-bottom: 4px; margin: 16px 0 9px;
+}
+h2.head:first-child { margin-top: 0; }
+.note { font-size: 11px; color: var(--ink-soft); line-height: 1.8; }
+.em { color: var(--plum-dark); font-weight: 600; }
+
+.btn {
+  display: block; width: 100%; border: 1px solid var(--gold-dark);
+  background: linear-gradient(180deg, var(--paper) 0%, var(--paper-3) 100%);
+  color: var(--ink); font-family: inherit; font-size: 13px; padding: 10px 12px;
+  cursor: pointer; letter-spacing: 1px; text-align: center;
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.38; cursor: default; }
+.btn + .btn { margin-top: 6px; }
+.btn.primary { background: linear-gradient(180deg, var(--plum) 0%, var(--plum-dark) 100%); color: #f4e8d0; border-color: var(--plum-dark); }
+.btn.gold { background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold-dark) 100%); color: #241a0c; border-color: var(--gold-dark); }
+.btn.sm { font-size: 11px; padding: 6px 9px; width: auto; display: inline-block; }
+.btn.ghost { background: rgba(255,255,255,0.2); }
+
+.box { border: 1px solid rgba(120,90,50,0.35); background: rgba(255,255,255,0.3); padding: 10px; margin-bottom: 8px; }
+.kv { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; padding: 3px 0; }
+.kv > span:last-child { font-weight: 600; text-align: right; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.row { display: flex; align-items: center; gap: 8px; }
+
+/* 자원 표시 */
+.res-bar { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; margin-top: 6px; }
+.res-qi { color: #2a6a8a; } .res-fame { color: var(--plum-dark); } .res-seed { color: var(--gold-dark); }
+
+/* 롤 박스 */
+.roll { border: 1px solid rgba(120,90,50,0.4); background: rgba(255,255,255,0.28); padding: 10px; margin-bottom: 8px; }
+.roll .rl { font-size: 10px; color: var(--ink-soft); letter-spacing: 2px; }
+.roll .rn { font-size: 15px; font-weight: 600; margin-top: 2px; }
+.roll .rd { font-size: 11px; color: var(--ink-2); line-height: 1.7; margin-top: 3px; }
+.roll .rb { font-size: 11px; color: var(--plum-dark); margin-top: 3px; }
+
+/* 문파 선택 */
+.sect-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.sect-cell {
+  border: 1px solid rgba(120,90,50,0.4); background: rgba(255,255,255,0.26);
+  padding: 8px; cursor: pointer; text-align: center;
+}
+.sect-cell.on { border-width: 2px; background: rgba(176,48,80,0.1); }
+.sect-cell .sc-h { font-family: 'Ma Shan Zheng', serif; font-size: 22px; line-height: 1.1; }
+.sect-cell .sc-n { font-size: 12px; font-weight: 600; margin-top: 2px; }
+.sect-cell .sc-c { font-size: 9.5px; color: var(--ink-soft); line-height: 1.5; margin-top: 3px; }
+
+/* 권역 선택 */
+.stage-cell {
+  border: 1px solid rgba(120,90,50,0.4); background: rgba(255,255,255,0.28);
+  padding: 10px; margin-bottom: 7px; cursor: pointer;
+}
+.stage-cell.locked { opacity: 0.42; cursor: default; }
+.stage-cell.clear { border-left: 3px solid var(--gold); }
+.stage-cell .st-top { display: flex; align-items: baseline; gap: 7px; }
+.stage-cell .st-g { font-family: 'Ma Shan Zheng', serif; font-size: 20px; }
+.stage-cell .st-n { font-size: 13.5px; font-weight: 600; }
+.stage-cell .st-f { font-size: 9.5px; padding: 1px 5px; border: 1px solid currentColor; }
+.stage-cell .st-a { font-size: 10px; color: var(--gold-dark); margin-left: auto; font-weight: 600; }
+.stage-cell .st-d { font-size: 10.5px; color: var(--ink-2); line-height: 1.65; margin-top: 4px; }
+.stage-cell .st-m { font-size: 10px; color: var(--plum-dark); margin-top: 3px; }
+
+/* 레벨업 카드 */
+#levelup { z-index: 30; }
+#lv-cards { display: flex; flex-direction: column; gap: 7px; }
+.lvc {
+  border: 1px solid rgba(120,90,50,0.45); background: rgba(255,255,255,0.34);
+  padding: 10px; cursor: pointer; text-align: left;
+}
+.lvc:active { transform: translateY(1px); }
+.lvc.evo { border: 2px solid var(--plum); background: linear-gradient(100deg, rgba(212,86,122,0.16), rgba(212,168,80,0.14)); }
+.lvc.new { border-left: 3px solid var(--gold); }
+.lvc .lc-top { display: flex; align-items: baseline; gap: 6px; }
+.lvc .lc-g { font-family: 'Ma Shan Zheng', serif; font-size: 20px; color: var(--plum-dark); }
+.lvc .lc-n { font-size: 13.5px; font-weight: 600; }
+.lvc .lc-t { font-size: 9px; padding: 1px 5px; color: #fff; }
+.lvc .lc-lv { font-size: 10px; color: var(--gold-dark); margin-left: auto; font-weight: 600; }
+.lvc .lc-d { font-size: 10.5px; color: var(--ink-2); line-height: 1.65; margin-top: 4px; }
+.lvc .lc-e { font-size: 10.5px; color: #2a6a8a; margin-top: 3px; }
+
+/* 능력치 행 */
+.stat-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px dashed rgba(120,90,50,0.25); }
+.stat-row:last-child { border-bottom: none; }
+.stat-g { font-family: 'Ma Shan Zheng', serif; font-size: 22px; width: 26px; text-align: center; color: var(--plum-dark); }
+.stat-m { flex: 1; min-width: 0; }
+.stat-n { font-size: 12px; font-weight: 600; }
+.stat-e { font-size: 10.5px; color: #2a6a8a; }
+.stat-v { font-size: 10px; color: var(--ink-soft); }
+.stat-b { display: flex; flex-direction: column; gap: 3px; }
+.stat-b .btn { min-width: 78px; padding: 5px 6px; font-size: 11px; }
+.cost { font-size: 9px; color: var(--ink-soft); text-align: center; }
+
+/* 승천 슬라이더 */
+.asc-wrap { display: flex; align-items: center; gap: 8px; }
+#asc-range { flex: 1; }
+#asc-num { font-family: 'Ma Shan Zheng', serif; font-size: 24px; min-width: 42px; text-align: center; color: var(--plum-dark); }
+
+/* 서열 */
+.rank-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px dashed rgba(120,90,50,0.25); }
+.rank-row.dead { opacity: 0.45; }
+.rank-row.dead .rk-n { text-decoration: line-through; }
+.rank-g { font-family: 'Ma Shan Zheng', serif; font-size: 20px; width: 26px; text-align: center; }
+.rk-n { font-size: 12.5px; font-weight: 600; }
+.rk-t { font-size: 10px; color: var(--ink-soft); }
+.rk-r { font-size: 9.5px; color: var(--plum-dark); }
+
+/* 미션 리스트 */
+.mi { display: flex; gap: 7px; font-size: 11px; padding: 3px 0; line-height: 1.6; }
+.mi .mk { width: 14px; flex: none; text-align: center; }
+.mi.done { color: var(--gold-dark); }
+.mi.done .mk::before { content: '✓'; }
+.mi:not(.done) .mk::before { content: '·'; color: var(--ink-soft); }
+
+/* 풍문 */
+#rumor-line { font-size: 10.5px; color: var(--ink-2); line-height: 1.7; text-align: center; margin-top: 10px; min-height: 30px; }
+#rumor-line.rare { color: #2a5a8a; }
+#rumor-line.legend { color: var(--plum-dark); font-weight: 600; }
+
+/* 토스트 */
+#toasts { position: fixed; left: 0; right: 0; bottom: calc(52px + env(safe-area-inset-bottom)); z-index: 25; pointer-events: none; padding: 0 12px; }
+.toast {
+  background: rgba(20,14,8,0.9); color: var(--paper); font-size: 11px;
+  padding: 7px 10px; margin-top: 5px; border-left: 3px solid var(--gold);
+  animation: tin 0.22s ease-out;
+}
+.toast.good { border-left-color: var(--plum-light); }
+@keyframes tin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* 결과 화면 등급 */
+.verdict { text-align: center; margin-bottom: 10px; }
+.verdict .vg { font-family: 'Ma Shan Zheng', serif; font-size: 52px; line-height: 1; }
+.verdict .vt { font-size: 14px; font-weight: 600; margin-top: 3px; }
+
+@media (min-width: 700px) {
+  .sheet { max-width: 520px; }
+  #hud-row { font-size: 12px; }
+}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<!-- ===== 런 HUD ===== -->
+<div id="hud">
+  <div id="xp-bar"><div id="xp-fill"></div></div>
+  <div id="hud-row">
+    <span id="hud-lv">境 三流 · Lv.1</span>
+    <span id="hud-kill">斬 0</span>
+    <span id="hud-time">0:00</span>
+  </div>
+  <div id="hud-mission"></div>
+</div>
+<div id="hud-arts"></div>
+<div id="pause-btn">❙❙</div>
+<div id="boss-hp"><div class="bh-name"></div><div class="bh-bar"><div class="bh-fill"></div></div></div>
+<div id="boss-banner">
+  <div class="bb-glyph hanja"></div>
+  <div class="bb-name"></div>
+  <div class="bb-line"></div>
+</div>
+<div id="stick"><div id="stick-knob"></div></div>
+
+<!-- ===== 명패 — 출신·재능·문파 ===== -->
+<div class="screen on" id="s-name"><div class="sheet">
+  <h1 class="title hanja">無名行</h1>
+  <div class="subtitle">혈로 (血路)</div>
+  <div class="tagline">천하제일에 오른들, 하늘 위에 또 하늘이 있다.<br>이름 없는 자의 끝없는 길.</div>
+
+  <div class="roll">
+    <div class="rl">出身 · 출신</div>
+    <div class="rn" id="rl-origin-n">—</div>
+    <div class="rd" id="rl-origin-d"></div>
+    <div class="rb" id="rl-origin-b"></div>
+  </div>
+  <div class="roll">
+    <div class="rl">天賦 · 재능</div>
+    <div class="rn" id="rl-talent-n">—</div>
+    <div class="rd" id="rl-talent-d"></div>
+    <div class="rb" id="rl-talent-b"></div>
+  </div>
+  <button class="btn ghost sm" id="btn-reroll" style="width:100%;margin-bottom:10px">다시 태어난다 (再生)</button>
+
+  <h2 class="head">門派 · 문파를 고른다</h2>
+  <div class="sect-grid" id="sect-grid"></div>
+  <div class="note" id="sect-note" style="margin-top:7px;min-height:34px"></div>
+
+  <input id="name-input" class="btn" placeholder="이름을 적으시오" maxlength="10"
+         style="margin-top:10px;background:rgba(255,255,255,0.5);text-align:center;font-size:15px">
+  <button class="btn primary" id="btn-begin" style="margin-top:8px">강호에 나선다</button>
+  <div class="note" id="load-note" style="text-align:center;margin-top:9px"></div>
+</div></div>
+
+<!-- ===== 허브 ===== -->
+<div class="screen" id="s-hub"><div class="sheet">
+  <div class="row">
+    <div>
+      <div style="font-size:15px;font-weight:600" id="hb-name">무명</div>
+      <div style="font-size:10px;color:var(--ink-soft)" id="hb-sub"></div>
+    </div>
+    <div class="hanja" id="hb-realm" style="margin-left:auto;font-size:24px;color:var(--plum-dark)">三流</div>
+  </div>
+  <div class="res-bar">
+    <span class="res-qi">眞氣 <b id="hb-qi">0</b></span>
+    <span class="res-fame">名聲 <b id="hb-fame">0</b></span>
+    <span class="res-seed">씨앗 <b id="hb-seed">0</b></span>
+  </div>
+  <div id="rumor-line"></div>
+
+  <div class="grid2" style="margin:6px 0 4px">
+    <button class="btn sm hb-tab on" data-t="stage" style="width:100%">圈域 권역</button>
+    <button class="btn sm hb-tab" data-t="stat" style="width:100%">能力 능력치</button>
+  </div>
+  <div class="grid2" style="margin-bottom:10px">
+    <button class="btn sm hb-tab" data-t="realm" style="width:100%">境地 경지</button>
+    <button class="btn sm hb-tab" data-t="dao" style="width:100%">道 서열·씨앗</button>
+  </div>
+
+  <div class="hb-panel on" id="hp-stage">
+    <h2 class="head">昇天 · 승천 단계</h2>
+    <div class="asc-wrap">
+      <span id="asc-num" class="hanja">0</span>
+      <input type="range" id="asc-range" min="0" max="20" value="0" step="1">
+    </div>
+    <div class="note" id="asc-desc" style="min-height:44px;margin-top:5px"></div>
+    <h2 class="head">圈域 · 권역을 고른다</h2>
+    <div id="stage-list"></div>
+  </div>
+
+  <div class="hb-panel" id="hp-stat">
+    <h2 class="head">能力値 · 능력치</h2>
+    <div class="note" style="margin-bottom:8px">진기(眞氣)로 능력치를 올린다. 경지를 돌파하면 상한이 열린다 — 끝이 없다.</div>
+    <div id="stat-list"></div>
+  </div>
+
+  <div class="hb-panel" id="hp-realm">
+    <h2 class="head">境地 · 경지</h2>
+    <div class="box" id="realm-box"></div>
+    <h2 class="head">武功 · 열린 등급</h2>
+    <div class="note" id="grade-note"></div>
+  </div>
+
+  <div class="hb-panel" id="hp-dao">
+    <h2 class="head">天下序列 · 천하서열</h2>
+    <div class="box" id="rank-self"></div>
+    <div id="rank-list"></div>
+    <h2 class="head">換骨奪胎 · 환골탈태</h2>
+    <div class="box" id="rebirth-box"></div>
+    <h2 class="head">道의 씨앗 · 영구 성장</h2>
+    <div id="seed-list"></div>
+    <h2 class="head">記錄 · 기록</h2>
+    <div class="box" id="record-box"></div>
+    <button class="btn ghost sm" id="btn-wipe" style="width:100%;margin-top:10px">모든 기록을 지운다</button>
+  </div>
+</div></div>
+
+<!-- ===== 미션 브리핑 ===== -->
+<div class="screen" id="s-brief"><div class="sheet">
+  <div class="row" style="margin-bottom:6px">
+    <span class="hanja" id="bf-glyph" style="font-size:30px"></span>
+    <div>
+      <div style="font-size:15px;font-weight:600" id="bf-name"></div>
+      <div style="font-size:10px;color:var(--ink-soft)" id="bf-faction"></div>
+    </div>
+    <span id="bf-asc" class="hanja" style="margin-left:auto;font-size:20px;color:var(--plum-dark)"></span>
+  </div>
+  <div class="note" id="bf-desc" style="margin-bottom:10px"></div>
+  <h2 class="head">主任務 · 주 미션</h2>
+  <div class="box" id="bf-main"></div>
+  <h2 class="head">副任務 · 부 미션</h2>
+  <div class="box" id="bf-sub"></div>
+  <h2 class="head">戰力 · 출전 능력치</h2>
+  <div class="box" id="bf-stats"></div>
+  <button class="btn primary" id="btn-enter" style="margin-top:10px">권역에 들어선다</button>
+  <button class="btn ghost" id="btn-brief-back">물러난다</button>
+</div></div>
+
+<!-- ===== 레벨업 ===== -->
+<div class="screen" id="levelup"><div class="sheet">
+  <div style="text-align:center;margin-bottom:4px">
+    <span class="hanja" style="font-size:30px;color:var(--plum-dark)">悟</span>
+  </div>
+  <div style="text-align:center;font-size:14px;font-weight:600" id="lv-title">깨달음</div>
+  <div class="note" style="text-align:center;margin:4px 0 12px" id="lv-sub"></div>
+  <div id="lv-cards"></div>
+  <button class="btn ghost sm" id="btn-lv-skip" style="width:100%;margin-top:8px">건너뛴다 (命 회복)</button>
+</div></div>
+
+<!-- ===== 일시정지 ===== -->
+<div class="screen" id="s-pause"><div class="sheet">
+  <h1 class="title hanja" style="font-size:28px">運氣調息</h1>
+  <div class="subtitle">일시정지</div>
+  <h2 class="head">運用 中 · 운용 중인 무공</h2>
+  <div id="pz-arts"></div>
+  <h2 class="head">戰況 · 전황</h2>
+  <div class="box" id="pz-info"></div>
+  <button class="btn primary" id="btn-resume" style="margin-top:10px">이어 싸운다</button>
+  <button class="btn ghost" id="btn-giveup">물러난다 (기록 정산)</button>
+</div></div>
+
+<!-- ===== 결과 ===== -->
+<div class="screen" id="s-result"><div class="sheet">
+  <div class="verdict">
+    <div class="vg hanja" id="rs-glyph"></div>
+    <div class="vt" id="rs-title"></div>
+  </div>
+  <div class="note" id="rs-story" style="margin-bottom:10px"></div>
+  <h2 class="head">任務 · 미션</h2>
+  <div class="box" id="rs-missions"></div>
+  <h2 class="head">收穫 · 수확</h2>
+  <div class="box" id="rs-gain"></div>
+  <button class="btn primary" id="btn-result-ok" style="margin-top:10px">돌아간다</button>
+</div></div>
+
+<!-- ===== 범용 모달 ===== -->
+<div class="screen" id="modal" style="z-index:40"><div class="sheet">
+  <div class="hanja" id="md-glyph" style="font-size:34px;text-align:center;color:var(--plum-dark);line-height:1.1"></div>
+  <div id="md-title" style="font-size:15px;font-weight:600;text-align:center;margin:4px 0 9px"></div>
+  <div id="md-body" style="font-size:12px;line-height:1.85;color:var(--ink-2)"></div>
+  <div id="md-opts" style="margin-top:12px"></div>
+</div></div>
+
+<div id="toasts"></div>
+
+<script>
+'use strict';
+/* ============================================================
+ *  1. 유틸(數 · 亂)
+ * ============================================================ */
+const TAU = Math.PI * 2;
+const NUM_UNITS = ['', '만', '억', '조', '경', '해', '자', '양', '구', '간', '정', '재', '극'];
+function fmt(n) {
+  if (!isFinite(n)) return '무량대수';
+  if (n < 0) return '-' + fmt(-n);
+  n = Math.floor(n);
+  if (n < 10000) return String(n);
+  const k = Math.floor(Math.log10(n) / 4);
+  if (k < NUM_UNITS.length) {
+    const v = n / Math.pow(10, k * 4);
+    return (v >= 100 ? v.toFixed(0) : v.toFixed(2)) + NUM_UNITS[k];
+  }
+  return n.toExponential(2).replace('e+', '×10^');
+}
+function pct(x) { return Math.round(x * 1000) / 10 + '%'; }
+const HANJA_NUM = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+function hanjaNum(n) {
+  n = Math.floor(n);
+  if (n < 10) return HANJA_NUM[n];
+  if (n < 100) { const t = (n / 10) | 0, o = n % 10; return (t > 1 ? HANJA_NUM[t] : '') + '十' + (o ? HANJA_NUM[o] : ''); }
+  return String(n);
+}
+function mmss(s) { s = Math.max(0, Math.floor(s)); return ((s / 60) | 0) + ':' + String(s % 60).padStart(2, '0'); }
+function pick(a) { return a[(Math.random() * a.length) | 0]; }
+function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+function rand(a, b) { return a + Math.random() * (b - a); }
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+
+/* ============================================================
+ *  2. Sound — index-3.html「군림천하」의 절차생성 음향을 이식
+ *  원본: index-3.html:2963-3084. 에셋 0, WebAudio 합성.
+ *  변경점: 뱀서류는 타격음이 초당 수십 발이라 큐별 최소 간격(throttle)을 추가했다.
+ * ============================================================ */
+const Sound = (() => {
+  let ctx = null, master = null, muted = false;
+  const lastAt = {};
+
+  function ensure() {
+    if (ctx) return ctx;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      ctx = new AC();
+      master = ctx.createGain();
+      master.gain.value = 0.45;
+      master.connect(ctx.destination);
+    } catch (e) { ctx = null; }
+    return ctx;
+  }
+  function unlock() {
+    const c = ensure();
+    if (c && c.state === 'suspended') c.resume().catch(() => {});
+  }
+  function tone(opt) {
+    const c = ensure();
+    if (!c || muted) return;
+    const t0 = c.currentTime + (opt.delay || 0);
+    const dur = opt.dur != null ? opt.dur : 0.18;
+    const osc = c.createOscillator();
+    osc.type = opt.type || 'sine';
+    osc.frequency.setValueAtTime(opt.freq, t0);
+    if (opt.bend != null) osc.frequency.exponentialRampToValueAtTime(Math.max(20, opt.bend), t0 + dur);
+    const g = c.createGain();
+    const peak = opt.gain != null ? opt.gain : 0.3;
+    const atk = opt.atk != null ? opt.atk : 0.005;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(peak, t0 + atk);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    let node = osc;
+    if (opt.lp) {
+      const f = c.createBiquadFilter();
+      f.type = 'lowpass'; f.frequency.value = opt.lp;
+      node.connect(f); f.connect(g);
+    } else node.connect(g);
+    g.connect(master);
+    osc.start(t0); osc.stop(t0 + dur + 0.02);
+  }
+  function noise(opt) {
+    const c = ensure();
+    if (!c || muted) return;
+    const t0 = c.currentTime + (opt.delay || 0);
+    const dur = opt.dur != null ? opt.dur : 0.12;
+    const len = Math.floor(c.sampleRate * dur);
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const f = c.createBiquadFilter();
+    f.type = opt.hp ? 'highpass' : 'lowpass';
+    f.frequency.value = opt.cutoff || 1800;
+    const g = c.createGain();
+    g.gain.setValueAtTime(opt.gain != null ? opt.gain : 0.18, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(f); f.connect(g); g.connect(master);
+    src.start(t0); src.stop(t0 + dur + 0.02);
+  }
+
+  // 큐 — [레시피, 최소 간격(초)]
+  const cues = {
+    hit:       [() => { tone({ freq: 150, type: 'sine', dur: 0.12, gain: 0.24, bend: 70 }); noise({ dur: 0.05, cutoff: 1400, gain: 0.09 }); }, 0.07],
+    block:     [() => { tone({ freq: 220, type: 'sine', dur: 0.18, gain: 0.2, lp: 900, bend: 180 }); noise({ dur: 0.06, cutoff: 700, gain: 0.1 }); }, 0.12],
+    pierce:    [() => { tone({ freq: 1320, type: 'sawtooth', dur: 0.1, gain: 0.09, lp: 3200, bend: 880 }); }, 0.1],
+    reflect:   [() => { tone({ freq: 660, type: 'triangle', dur: 0.09, gain: 0.13 }); tone({ freq: 990, type: 'triangle', dur: 0.1, gain: 0.11, delay: 0.06 }); }, 0.15],
+    insight:   [() => { [523, 659, 784].forEach((f, i) => tone({ freq: f, type: 'sine', dur: 0.9, gain: 0.16, atk: 0.02, lp: 3000, delay: i * 0.09 })); }, 0.4],
+    enemyDead: [() => { tone({ freq: 330, type: 'sawtooth', dur: 0.22, gain: 0.13, bend: 90, lp: 1600 }); }, 0.06],
+    win:       [() => { [392, 494, 587, 698, 880].forEach((f, i) => tone({ freq: f, type: 'triangle', dur: 0.5, gain: 0.18, atk: 0.01, lp: 3200, delay: i * 0.12 })); }, 1],
+    lose:      [() => { [330, 277, 220, 165].forEach((f, i) => tone({ freq: f, type: 'sine', dur: 0.7, gain: 0.2, bend: f * 0.7, delay: i * 0.16 })); }, 1],
+    // ── 혈로 추가 큐 ──
+    gem:       [() => { tone({ freq: 880, type: 'triangle', dur: 0.06, gain: 0.06, bend: 1180 }); }, 0.045],
+    levelup:   [() => { [523, 698, 880, 1046].forEach((f, i) => tone({ freq: f, type: 'triangle', dur: 0.45, gain: 0.15, atk: 0.01, lp: 3600, delay: i * 0.07 })); }, 0.3],
+    evolve:    [() => { [262, 392, 523, 784, 1046].forEach((f, i) => tone({ freq: f, type: 'sine', dur: 1.1, gain: 0.17, atk: 0.02, lp: 4200, delay: i * 0.11 })); noise({ dur: 0.5, cutoff: 2400, gain: 0.08, hp: true, delay: 0.1 }); }, 1],
+    bossAppear:[() => { tone({ freq: 82, type: 'sawtooth', dur: 1.3, gain: 0.3, lp: 420 }); tone({ freq: 110, type: 'sine', dur: 1.1, gain: 0.22, bend: 62, delay: 0.12 }); noise({ dur: 0.7, cutoff: 500, gain: 0.14 }); }, 1],
+    hurt:      [() => { tone({ freq: 196, type: 'sawtooth', dur: 0.2, gain: 0.24, bend: 88, lp: 1100 }); noise({ dur: 0.1, cutoff: 900, gain: 0.13 }); }, 0.16],
+    swing:     [() => { noise({ dur: 0.07, cutoff: 2600, gain: 0.055, hp: true }); }, 0.09],
+    freeze:    [() => { tone({ freq: 1568, type: 'sine', dur: 0.22, gain: 0.08, bend: 2300, lp: 5200 }); }, 0.2],
+    breakthrough:[() => { [131, 196, 262, 392, 523, 784].forEach((f, i) => tone({ freq: f, type: 'sine', dur: 1.4, gain: 0.18, atk: 0.03, lp: 3800, delay: i * 0.13 })); }, 1],
+  };
+
+  function play(name) {
+    if (muted) return;
+    const e = cues[name];
+    if (!e) return;
+    const c = ensure();
+    if (!c) return;
+    const now = c.currentTime;
+    if (lastAt[name] != null && now - lastAt[name] < e[1]) return;   // 연사 스로틀
+    lastAt[name] = now;
+    if (c.state === 'suspended') c.resume().catch(() => {});
+    try { e[0](); } catch (err) {}
+  }
+  function toggle() { muted = !muted; return muted; }
+  function isMuted() { return muted; }
+  return { play, unlock, toggle, isMuted };
+})();
+
+/* ============================================================
+ *  3. 설정집(設定集) — index-3.html「군림천하」승계
+ * ============================================================ */
+
+// ── 진영(陣營)
+const FACTIONS = {
+  jeongpa:  { h: '정파',     g: '正', color: '#4a7a8c', lore: '협(俠)의 이름으로 강호의 질서를 자처한다.' },
+  cheonma:  { h: '마교',     g: '魔', color: '#b03048', lore: '천마(天魔)가 사라진 자리를 잔당이 지킨다.' },
+  binggung: { h: '빙궁',     g: '氷', color: '#4a90b8', lore: '북방 설산의 빙공 고수들. 중원을 노린다.' },
+  hyeolgyo: { h: '혈교',     g: '血', color: '#8a1828', lore: '피를 마시는 사교(邪敎). 불사(不死)를 꿈꾼다.' },
+  sapa:     { h: '사파연합', g: '邪', color: '#7a6a3a', lore: '군소 사파의 오합지졸 연합. 수가 곧 힘이라 믿는다.' },
+};
+
+// ── 문파(門派) — 시작 무공과 능력치 성향을 정한다
+const SECTS = {
+  hwasan:   { h: '화산파', n: '華山', g: '梅', faction: 'jeongpa', color: '#b03050',
+              creed: '축적과 폭발 — 매화처럼 일순간 만개한다',
+              bonus: { geunggol: 4, naegong: 2 }, startCho: 'gibon_geomsik',
+              intro: '화산(華山)의 검(劍)을 익힌 그대, 협(俠)의 이름을 천하에 새기고자 강호에 나선다.' },
+  mudang:   { h: '무당파', n: '武當', g: '太', faction: 'jeongpa', color: '#4a7a8c',
+              creed: '유(柔)로 강(剛)을 제압 — 흘리고 되받는다',
+              bonus: { chebaek: 4, oseong: 2 }, startCho: 'taegeuk_geom',
+              intro: '무당(武當)의 도(道)를 깨친 그대, 흔들리는 강호를 바로 세우려 길을 나선다.' },
+  sorim:    { h: '소림',   n: '少林', g: '金', faction: 'jeongpa', color: '#a06830',
+              creed: '외공과 금강 — 단단히 받치고 되받아친다',
+              bonus: { chebaek: 5, geunggol: 1 }, startCho: 'nahan_gwon',
+              intro: '소림(少林)의 외공(外功)으로 몸을 세운 그대, 금강(金剛)의 길을 걷고자 산문을 나선다.' },
+  cheonma:  { h: '마교',   n: '天魔', g: '魔', faction: 'cheonma', color: '#b03048',
+              creed: '흡정과 압도 — 적의 기를 삼켜 군림한다',
+              bonus: { geunggol: 5, naegong: 1 }, startCho: 'majol_gong',
+              intro: '마교(魔敎)의 강기(罡氣)를 이어받은 그대, 사라진 천마의 빈 자리를 노린다.' },
+  hyeolgyo: { h: '혈교',   n: '血敎', g: '血', faction: 'hyeolgyo', color: '#8a1828',
+              creed: '출혈과 광기 — 제 피를 바쳐 폭발한다',
+              bonus: { geunggol: 6 }, startCho: 'hyeoldo',
+              intro: '혈교(血敎)의 피의 의식을 거친 그대, 불사(不死)의 끝을 보려 제단을 떠난다.' },
+  binggung: { h: '빙궁',   n: '氷宮', g: '氷', faction: 'binggung', color: '#4a90b8',
+              creed: '빙결과 음기 — 얼려 묶고 두텁게 버틴다',
+              bonus: { chebaek: 3, sinbeop: 3 }, startCho: 'hanseol',
+              intro: '빙궁(氷宮)의 한기(寒氣)를 품은 그대, 설산을 내려와 중원으로 향한다.' },
+  sapa:     { h: '사파',   n: '邪派', g: '邪', faction: 'sapa', color: '#7a6a3a',
+              creed: '변칙과 속공 — 빠르게 몰아치고 홀려 무너뜨린다',
+              bonus: { sinbeop: 5, geunggol: 1 }, startCho: 'heukpung_do',
+              intro: '사파(邪派)의 변칙을 배운 그대, 규율 없는 길로 정점을 노린다.' },
+};
+
+// ── 출신(出身)
+const ORIGINS = {
+  pyosa:     { h: '표사(鏢師)의 자식', g: '鏢', d: '호송 무리에서 자라 몸이 단단하다.',
+               b: '체백(體魄) 바탕 +6', apply: m => { m.base.chebaek += 6; } },
+  mollak:    { h: '몰락 가문의 후예',  g: '家', d: '한때 명문이었다. 비급 한 조각이 남았다.',
+               b: '시작 시 무공 1개를 더 익힌 채 출전', apply: m => { m.extraArt = true; } },
+  muroe:     { h: '저잣거리 무뢰배',   g: '拳', d: '거리 싸움으로 단련됐다. 악착같다.',
+               b: '근골(筋骨) 바탕 +6', apply: m => { m.base.geunggol += 6; } },
+  yakjangsu: { h: '떠돌이 약장수',     g: '藥', d: '독과 약초에 밝아 잔꾀가 많다.',
+               b: '진기(眞氣) 획득 +25%', apply: m => { m.qiGain = 1.25; } },
+  gou:       { h: '거리의 고아',       g: '孤', d: '이름도 성도 없다. 잃을 것이 없으니 두려움도 없다.',
+               b: '신법(身法) 바탕 +5, 기 구슬 흡수 +20%', apply: m => { m.base.sinbeop += 5; m.pickupBonus = 1.2; } },
+  seolsan:   { h: '설산의 사냥꾼',     g: '獵', d: '눈밭에서 짐승을 쫓아 살았다. 발이 빠르다.',
+               b: '오성(悟性) 바탕 +5, 경험 +10%', apply: m => { m.base.oseong += 5; m.xpBonus = 1.1; } },
+};
+
+// ── 재능(天賦) — 희귀도 차등 랜덤
+const TALENT_TIERS = {
+  ping:  { n: '平', h: '평범', color: '#8a8a7a', w: 0.58 },
+  su:    { n: '秀', h: '비범', color: '#6a9a5a', w: 0.28 },
+  gi:    { n: '奇', h: '기재', color: '#4a8ac8', w: 0.10 },
+  cheon: { n: '天', h: '천재', color: '#c89030', w: 0.0195 },
+  sin:   { n: '神', h: '무신', color: '#c83030', w: 0.0005 },
+};
+// m 키: dmg, hp, spd, cd, pickup, xp, dr, dodge, area, revive
+const TALENTS = {
+  pyeongbeom: { t: 'ping',  h: '평범한 골격',       g: '凡', d: '특별할 것 없는 자질. 모든 것은 노력에 달렸다.', m: {} },
+  geom_jae:   { t: 'su',    h: '검(劍)의 재능',     g: '劍', d: '검을 잡으면 손에 붙는다.', m: { dmg: 1.12 } },
+  do_jae:     { t: 'su',    h: '도(刀)의 재능',     g: '刀', d: '도법에 천부적. 베인 자리가 벌어진다.', m: { dmg: 1.08, bleed: 0.06 } },
+  cheolposam: { t: 'su',    h: '철포삼(鐵布衫)',     g: '鐵', d: '외공으로 단련된 몸.', m: { hp: 1.20 } },
+  gyeongsin:  { t: 'su',    h: '경신(輕身)',         g: '輕', d: '날렵한 몸놀림.', m: { spd: 1.14 } },
+  chongmyeong:{ t: 'su',    h: '총명(聰明)',         g: '聰', d: '깨달음이 빠르다.', m: { xp: 1.22 } },
+  mandok:     { t: 'gi',    h: '만독불침(萬毒不侵)', g: '毒', d: '천하의 어떤 독도 침범 못 한다.', m: { hp: 1.15, immunePoison: 1 } },
+  geunno:     { t: 'gi',    h: '노력의 천재 · 역근경', g: '勤', d: '쉼 없는 정진.', m: { xp: 1.45 } },
+  maeryeok:   { t: 'gi',    h: '매력(魅力)',         g: '魅', d: '사람을 끄는 힘. 기가 저절로 모인다.', m: { pickup: 1.6 } },
+  geumgang:   { t: 'gi',    h: '금강불괴(金剛不壞)', g: '剛', d: '깨지지 않는 몸.', m: { hp: 1.3, dr: 0.10 } },
+  hwanyeong:  { t: 'gi',    h: '환영보(幻影步)',     g: '幻', d: '그림자가 여럿으로 갈린다.', m: { spd: 1.12, dodge: 0.10 } },
+  cheonmu:    { t: 'cheon', h: '천무지체(天武之體)', g: '天', d: '모든 무공을 조화롭게 익히는 신체.', m: { cd: 0.82, xp: 1.25 } },
+  cheonsal:   { t: 'cheon', h: '천살성(天殺星)',     g: '殺', d: '살기를 타고난 별. 주고받는 피해가 모두 커진다.', m: { dmg: 1.5, hp: 0.88 } },
+  simsang:    { t: 'cheon', h: '무한심상(無限心象)', g: '心', d: '마음이 곧 무공.', m: { dmg: 1.2, area: 1.2, cd: 0.9 } },
+  bulsa:      { t: 'cheon', h: '불사지체(不死之體)', g: '不', d: '한 번 죽어도 다시 일어선다.', m: { hp: 1.2, revive: 1 } },
+  geomsin:    { t: 'sin',   h: '검신(劍神)',         g: '神', d: '검의 화신. 강호에 백 년마다 하나 난다.', m: { dmg: 1.85, cd: 0.85, area: 1.15 } },
+  musin:      { t: 'sin',   h: '무신지체(武神之體)', g: '武', d: '무(武) 그 자체로 태어난 몸.', m: { dmg: 1.6, hp: 1.55, spd: 1.15, dr: 0.08 } },
+};
+const TALENTS_BY_TIER = {};
+for (const [id, t] of Object.entries(TALENTS)) (TALENTS_BY_TIER[t.t] = TALENTS_BY_TIER[t.t] || []).push(id);
+
+// 씨앗(天)으로 상위 티어 확률이 오른다
+function rollTalent(luck) {
+  const order = ['sin', 'cheon', 'gi', 'su'];
+  const boost = 1 + (luck || 0);
+  const r = Math.random();
+  let acc = 0;
+  for (const t of order) {
+    acc += TALENT_TIERS[t].w * boost;
+    if (r < acc) return pick(TALENTS_BY_TIER[t]);
+  }
+  return pick(TALENTS_BY_TIER.ping);
+}
+
+// ── 경지(境地) — 무한. 화경 위로 생사경·현경·신화경, 그 위는 천외천 N중.
+const REALMS = [
+  { n: '三流',   h: '삼류',   d: '흔한 입문의 경지. 누구나 여기서 시작한다.' },
+  { n: '二流',   h: '이류',   d: '기본기를 갖췄다. 뒷골목에서는 제법 통한다.' },
+  { n: '一流',   h: '일류',   d: '문파의 정식 제자 수준. 내공이 몸에 붙었다.' },
+  { n: '絕頂',   h: '절정',   d: '상승 무공의 경지. 무형의 기(氣)를 발현한다.' },
+  { n: '超絕頂', h: '초절정', d: '장문인급. 무림 전체에 백여 명뿐이다.' },
+  { n: '化境',   h: '화경',   d: '절세신공의 경지. 전설로만 전해진다.' },
+  { n: '生死境', h: '생사경', d: '삶과 죽음의 경계를 본다. 구존(九尊)의 반열.' },
+  { n: '玄境',   h: '현경',   d: '천지의 이치와 통한다. 천존(天尊)의 자리.' },
+  { n: '神話境', h: '신화경', d: '인간을 벗어났다. 강호에 기록이 없다.' },
+];
+function realmName(k) {
+  if (k < REALMS.length) return REALMS[k];
+  const j = k - REALMS.length + 1;
+  return { n: '天外天 ' + hanjaNum(j) + '重', h: '천외천 ' + j + '중',
+           d: '하늘 위의 하늘. 이 위에도 또 하늘이 있다 — 끝은 없다.' };
+}
+// 경지는 능력치 상한과 무공 등급을 연다. 파워 자체는 능력치에서 나온다.
+function statCap(k) { return 20 + 20 * k; }
+function realmReq(k) { return Math.ceil(400 * Math.pow(2.35, k)); }
+
+// ── 능력치(能力値) 5축
+const STATS = [
+  { id: 'geunggol', n: '筋骨', h: '근골', g: '筋', d: '뼈와 힘줄. 일격의 무게.',
+    eff: v => '무공 피해 +' + pct(v * 0.05) },
+  { id: 'chebaek',  n: '體魄', h: '체백', g: '魄', d: '살과 뼈의 그릇. 목숨의 길이.',
+    eff: v => '최대 命 +' + pct(v * 0.075) + ' · 피해감소 ' + pct(clamp(v * 0.0028, 0, 0.3)) },
+  { id: 'naegong',  n: '內功', h: '내공', g: '氣', d: '단전의 진기. 초식이 빨라진다.',
+    eff: v => '쿨다운 -' + pct(1 - 1 / (1 + v * 0.02)) + (v >= 25 ? ' · 투사체 +' + ((v / 25) | 0) : '') },
+  { id: 'sinbeop',  n: '身法', h: '신법', g: '身', d: '보법과 몸놀림. 속도와 회피.',
+    eff: v => '이동 +' + pct(v * 0.012) + ' · 회피 ' + pct(v / (v + 180)) },
+  { id: 'oseong',   n: '悟性', h: '오성', g: '悟', d: '깨달음의 그릇. 기를 멀리서 끌어온다.',
+    eff: v => '흡수 반경 +' + pct(v * 0.02) + ' · 경험 +' + pct(v * 0.025) },
+];
+function statCost(lv) { return Math.ceil(8 * Math.pow(1.14, lv)); }
+function statCostN(lv, n) { let s = 0; for (let i = 0; i < n; i++) s += statCost(lv + i); return s; }
+
+// ── 무공 등급(等級) — 경지가 낮으면 구결이 눈에 들어오지 않는다
+const GRADES = {
+  samryu:    { n: '三流',   h: '삼류',   tier: 1, color: '#8a8a7a', realm: 0 },
+  iryu:      { n: '二流',   h: '이류',   tier: 2, color: '#7a8a5a', realm: 1 },
+  ilryu:     { n: '一流',   h: '일류',   tier: 3, color: '#5f8a49', realm: 2 },
+  jeoljeong: { n: '絕頂',   h: '절정',   tier: 4, color: '#3a70b9', realm: 3 },
+  chojeol:   { n: '超絕頂', h: '초절정', tier: 5, color: '#7b3996', realm: 5 },
+  hwagyeong: { n: '化境',   h: '화경',   tier: 6, color: '#b0821e', realm: 7 },
+  jeolse:    { n: '絕世',   h: '절세',   tier: 7, color: '#a81828', realm: 99 },  // 진화 전용
+};
+
+/* ============================================================
+ *  4. 무공(武功) — 초식(招式)은 무기, 심법(心法)은 패시브
+ * ============================================================ */
+// 8종 공격 패턴 프리미티브:
+//   arc    전방 부채꼴 참격 (즉시 판정)
+//   orbit  몸 주위를 도는 기(氣) — 접촉 피해
+//   shot   이동 방향 직선 투사체
+//   homing 가장 가까운 적을 쫓는 투사체
+//   aura   플레이어 중심 지속 장판
+//   nova   전방위 방사
+//   beam   즉시 관통 선분
+//   field  지면에 남는 장판
+// 성장 축은 무공마다 다르다(grow) — 그래서 같은 패턴도 다르게 자란다.
+const ART_MAX = 8, SIM_MAX = 5;
+const ARTS = {
+  /* ── 삼류(三流) — 각 문파 입문 초식 ── */
+  mumyeong_ta: { h: '막대치기', n: '棒打', g: '棒', type: 'cho', grade: 'samryu', sect: null,
+    d: '길에서 주운 막대를 휘두른다. 무공이라 부르기도 민망하다.',
+    pattern: 'arc', dmg: 11, cd: 0.8, radius: 66, arc: 2.1, knock: 90,
+    grow: ['dmg', 'radius', 'cd'], color: '#8a7a5a' },
+  gibon_geomsik: { h: '기본검식', n: '基本劍式', g: '劍', type: 'cho', grade: 'samryu', sect: 'hwasan',
+    d: '찌르고 베는 검의 기본. 화산 제자의 첫 검이다.',
+    pattern: 'arc', dmg: 17, cd: 1.0, radius: 84, arc: 1.35, knock: 70,
+    grow: ['dmg', 'radius', 'cd'], color: '#d4567a' },
+  taegeuk_geom: { h: '태극검', n: '太極劍', g: '太', type: 'cho', grade: 'samryu', sect: 'mudang',
+    d: '유연한 태극의 검이 몸 주위를 돈다. 흘려 막고 되받는다.',
+    pattern: 'orbit', dmg: 9, cd: 0.42, count: 2, radius: 76, spin: 2.2,
+    grow: ['dmg', 'count', 'radius'], color: '#6aa8bc' },
+  nahan_gwon: { h: '나한권', n: '羅漢拳', g: '拳', type: 'cho', grade: 'samryu', sect: 'sorim',
+    d: '나한의 주먹. 우직하고 단단해 적을 멀리 밀어낸다.',
+    pattern: 'arc', dmg: 15, cd: 1.15, radius: 72, arc: 2.6, knock: 190,
+    grow: ['dmg', 'radius', 'cd'], color: '#c08a44' },
+  majol_gong: { h: '마졸공', n: '魔卒功', g: '卒', type: 'cho', grade: 'samryu', sect: 'cheonma',
+    d: '마교 졸개의 기공. 거칠지만 강기(罡氣)를 날린다.',
+    pattern: 'shot', dmg: 16, cd: 0.9, count: 1, speed: 340, life: 1.1, pierce: 1,
+    grow: ['dmg', 'count', 'cd'], color: '#d44060' },
+  hyeoldo: { h: '혈도법', n: '血刀法', g: '血', type: 'cho', grade: 'samryu', sect: 'hyeolgyo',
+    d: '피를 부르는 도법. 베인 상처가 아물지 않는다.',
+    pattern: 'arc', dmg: 12, cd: 0.85, radius: 74, arc: 1.8, knock: 60, status: { bleed: 5 },
+    grow: ['dmg', 'cd', 'radius'], color: '#a81828' },
+  heukpung_do: { h: '흑풍도법', n: '黑風刀法', g: '黑', type: 'cho', grade: 'samryu', sect: 'sapa',
+    d: '흑풍채의 쌍도. 살기가 앞서고 손이 빠르다.',
+    pattern: 'arc', dmg: 10, cd: 0.52, radius: 68, arc: 1.7, knock: 70,
+    grow: ['dmg', 'cd', 'radius'], color: '#9a8a4a' },
+  hangi_jang: { h: '한기장', n: '寒氣掌', g: '寒', type: 'cho', grade: 'samryu', sect: 'binggung',
+    d: '손끝에서 찬 기운이 뻗는다. 맞은 자의 발이 무거워진다.',
+    pattern: 'shot', dmg: 13, cd: 0.95, count: 1, speed: 300, life: 1.0, pierce: 1,
+    status: { slow: 0.35, slowDur: 1.3 },
+    grow: ['dmg', 'count', 'cd'], color: '#6ac0e0' },
+
+  /* ── 이류(二流) ── */
+  geumjongjo: { h: '금종조', n: '金鐘罩', g: '鐘', type: 'cho', grade: 'iryu', sect: 'sorim',
+    d: '몸에 종(鐘)을 씌운 듯한 호신강기. 닿는 것을 튕겨낸다.',
+    pattern: 'orbit', dmg: 10, cd: 0.5, count: 3, radius: 58, spin: -1.6, knock: 130,
+    grow: ['dmg', 'count', 'radius'], color: '#d4a850' },
+  amgi: { h: '암기술', n: '暗器術', g: '暗', type: 'cho', grade: 'iryu', sect: 'sapa',
+    d: '소매에서 암기가 쏟아진다. 눈에 보이는 적을 알아서 찾아간다.',
+    pattern: 'homing', dmg: 9, cd: 0.75, count: 2, speed: 300, life: 1.6, pierce: 0,
+    grow: ['dmg', 'count', 'cd'], color: '#8a8a7a' },
+
+  /* ── 일류(一流) ── */
+  nagyeong_geom: { h: '낙영검법', n: '落英劍法', g: '落', type: 'cho', grade: 'ilryu', sect: 'hwasan',
+    d: '떨어지는 꽃잎처럼 검이 흩날린다. 세 갈래로 갈라져 나간다.',
+    pattern: 'shot', dmg: 14, cd: 1.0, count: 3, speed: 380, life: 1.0, pierce: 1, spread: 0.42,
+    grow: ['dmg', 'count', 'pierce'], color: '#d4567a' },
+  yangui_geom: { h: '양의검법', n: '兩儀劍法', g: '兩', type: 'cho', grade: 'ilryu', sect: 'mudang',
+    d: '음양 두 갈래로 검을 나눈다. 안팎 두 겹으로 돈다.',
+    pattern: 'orbit', dmg: 13, cd: 0.4, count: 4, radius: 92, spin: 1.9, dual: true,
+    grow: ['dmg', 'count', 'radius'], color: '#4a90a8' },
+  baekbo: { h: '백보신권', n: '百步神拳', g: '百', type: 'cho', grade: 'ilryu', sect: 'sorim',
+    d: '백 보 밖의 적을 권풍(拳風)으로 친다. 줄줄이 꿰뚫는다.',
+    pattern: 'shot', dmg: 22, cd: 1.35, count: 1, speed: 470, life: 1.5, pierce: 4,
+    grow: ['dmg', 'pierce', 'cd'], color: '#c08a44' },
+  hanseol: { h: '한설장법', n: '寒雪掌法', g: '雪', type: 'cho', grade: 'ilryu', sect: 'binggung',
+    d: '손을 펼치면 사위에 눈보라가 인다. 적의 몸이 굳는다.',
+    pattern: 'nova', dmg: 12, cd: 2.0, count: 6, speed: 260, life: 1.2, pierce: 1,
+    status: { freeze: 0.9, freezeChance: 0.35 },
+    grow: ['dmg', 'count', 'cd'], color: '#9ad8f0' },
+  bijo: { h: '비조암습', n: '飛爪暗襲', g: '爪', type: 'cho', grade: 'ilryu', sect: 'sapa',
+    d: '갈고리가 허공을 물고 되돌아온다. 정면으로 싸우지 않는다.',
+    pattern: 'homing', dmg: 16, cd: 0.8, count: 2, speed: 380, life: 2.0, pierce: 1,
+    grow: ['dmg', 'count', 'cd'], color: '#9a8a4a' },
+  hyeolma_geom: { h: '혈마검', n: '血魔劍', g: '魔', type: 'cho', grade: 'ilryu', sect: 'hyeolgyo',
+    d: '제 피를 검에 먹인다. 광기가 검을 재촉한다.',
+    pattern: 'arc', dmg: 20, cd: 0.8, radius: 84, arc: 2.0, knock: 80, status: { bleed: 10 },
+    grow: ['dmg', 'radius', 'cd'], color: '#c02038' },
+
+  /* ── 절정(絕頂) ── */
+  maehwa_geom: { h: '매화검법', n: '梅花劍法', g: '梅', type: 'cho', grade: 'jeoljeong', sect: 'hwasan',
+    d: '매화가 점점이 흩날리는 정교한 연환 검법. 사위로 꽃잎이 퍼진다.',
+    pattern: 'nova', dmg: 17, cd: 1.7, count: 8, speed: 300, life: 1.3, pierce: 2, status: { bleed: 6 },
+    grow: ['dmg', 'count', 'cd'], color: '#e070a0' },
+  taecheong: { h: '태청검법', n: '太淸劍法', g: '淸', type: 'cho', grade: 'jeoljeong', sect: 'mudang',
+    d: '맑고 담담한 한 줄기 검. 군더더기가 없어 빈틈도 없다.',
+    pattern: 'beam', dmg: 40, cd: 1.9, count: 1, radius: 22, life: 0.28, range: 620,
+    grow: ['dmg', 'count', 'cd'], color: '#7ad0e8' },
+  bingbaek: { h: '빙백신장', n: '氷白神掌', g: '氷', type: 'cho', grade: 'jeoljeong', sect: 'binggung',
+    d: '닿은 땅이 얼어붙는다. 그 위를 지나는 것이 멈춘다.',
+    pattern: 'field', dmg: 9, cd: 1.6, count: 1, radius: 92, life: 3.4, tick: 0.45,
+    status: { freeze: 0.6, freezeChance: 0.5, slow: 0.5, slowDur: 1.0 },
+    grow: ['dmg', 'radius', 'life'], color: '#8ad0ee' },
+  cheonma_seom: { h: '천마섬공', n: '天魔閃功', g: '閃', type: 'cho', grade: 'jeoljeong', sect: 'cheonma',
+    d: '눈 깜빡할 사이 마기가 사위를 찢는다.',
+    pattern: 'nova', dmg: 15, cd: 1.15, count: 5, speed: 520, life: 0.85, pierce: 3,
+    grow: ['dmg', 'count', 'cd'], color: '#e04868' },
+  mandokjang: { h: '만독장', n: '萬毒掌', g: '蠱', type: 'cho', grade: 'jeoljeong', sect: 'sapa',
+    d: '땅에 독무(毒霧)를 깔아 적을 서서히 녹인다.',
+    pattern: 'field', dmg: 7, cd: 1.4, count: 2, radius: 78, life: 4.2, tick: 0.35,
+    status: { poison: 8 },
+    grow: ['dmg', 'count', 'radius'], color: '#6aa04a' },
+
+  /* ── 초절정(超絕頂) ── */
+  heupseong: { h: '흡성대법', n: '吸星大法', g: '吸', type: 'cho', grade: 'chojeol', sect: 'cheonma',
+    d: '주위의 진기를 빨아들여 제 것으로 삼는다. 가까이 온 자가 마른다.',
+    pattern: 'aura', dmg: 15, cd: 0.4, radius: 120, lifesteal: 0.06,
+    grow: ['dmg', 'radius', 'cd'], color: '#b03048' },
+  cheonhwan: { h: '천환마공', n: '千幻魔功', g: '幻', type: 'cho', grade: 'chojeol', sect: 'sapa',
+    d: '천 개의 환영이 동시에 적을 찢는다.',
+    pattern: 'homing', dmg: 18, cd: 0.62, count: 5, speed: 440, life: 2.2, pierce: 1,
+    grow: ['dmg', 'count', 'cd'], color: '#a878c8' },
+
+  /* ── 화경(化境) ── */
+  taehwa_muhyeong: { h: '태화무형검', n: '太華無形劍', g: '無', type: 'cho', grade: 'hwagyeong', sect: null,
+    d: '검이 형(形)을 버렸다. 보이지 않는 검에는 막을 것이 없다.',
+    pattern: 'beam', dmg: 62, cd: 1.5, count: 3, radius: 26, life: 0.25, range: 760,
+    grow: ['dmg', 'count', 'cd'], color: '#e8e0c8' },
+  cheonoe_ilgeom: { h: '천외일검', n: '天外一劍', g: '天', type: 'cho', grade: 'hwagyeong', sect: null,
+    d: '하늘 밖에서 오는 한 검. 이 검을 본 자는 말이 없다.',
+    pattern: 'nova', dmg: 55, cd: 2.4, count: 12, speed: 560, life: 1.4, pierce: 6,
+    grow: ['dmg', 'count', 'pierce'], color: '#f0d890' },
+
+  /* ── 심법(心法) — 패시브. m은 1단당 증가치 ── */
+  mumyeong_unki: { h: '기본 운기법', n: '基本運氣', g: '運', type: 'sim', grade: 'samryu', sect: null,
+    d: '숨을 고르고 기를 돌린다. 모든 무공의 첫걸음.', m: { dmg: 0.05 } },
+  eumgi: { h: '음기심법', n: '陰氣心法', g: '陰', type: 'sim', grade: 'samryu', sect: 'binggung',
+    d: '차가운 기를 단전에 모은다. 흩어진 기가 저절로 모여든다.', m: { pickup: 0.20 } },
+  yeokgeun: { h: '역근경', n: '易筋經', g: '易', type: 'sim', grade: 'iryu', sect: null,
+    d: '힘줄을 바꾸는 경전. 같은 싸움에서 더 많이 깨닫는다.', m: { xp: 0.15 } },
+  cheonma_sg: { h: '천마신공', n: '天魔神功', g: '天', type: 'sim', grade: 'ilryu', sect: 'cheonma',
+    d: '천마의 심법. 마기가 단전을 채우고 살기가 손끝에 오른다.', m: { dmg: 0.08, lifesteal: 0.006 } },
+  geumgang_sg: { h: '금강불괴신공', n: '金剛不壞神功', g: '剛', type: 'sim', grade: 'jeoljeong', sect: 'sorim',
+    d: '몸이 금강으로 화한다. 병장기가 들지 않는다.', m: { hp: 0.13, dr: 0.025 } },
+  hwanyeong_bo: { h: '환영보', n: '幻影步', g: '影', type: 'sim', grade: 'jeoljeong', sect: 'sapa',
+    d: '그림자가 여럿으로 갈린다. 잡히지 않는다.', m: { spd: 0.07, dodge: 0.03 } },
+  hyeol_gong: { h: '혈공', n: '血功', g: '祭', type: 'sim', grade: 'jeoljeong', sect: 'hyeolgyo',
+    d: '피로 기를 만든다. 대가는 제 목숨이다.', m: { lifesteal: 0.015, hp: -0.04, dmg: 0.06 } },
+  yangui_simgong: { h: '양의심공', n: '兩儀心功', g: '儀', type: 'sim', grade: 'chojeol', sect: 'mudang',
+    d: '두 갈래로 내공을 운용해 초식을 끊이지 않게 잇는다.', m: { cd: 0.06, hp: 0.07 } },
+  hyeoneum: { h: '현음진경', n: '玄陰眞經', g: '玄', type: 'sim', grade: 'chojeol', sect: 'binggung',
+    d: '빙궁 최상의 진경. 얼어붙은 것이 좀처럼 풀리지 않는다.', m: { freezeDur: 0.25, hp: 0.08 } },
+  jaha_singong: { h: '자하신공', n: '紫霞神功', g: '霞', type: 'sim', grade: 'hwagyeong', sect: 'hwasan',
+    d: '장문인의 심법. 자색 노을이 단전에 깃들어 초식이 넓고 무거워진다.', m: { dmg: 0.14, area: 0.06 } },
+  muguk_simgyeong: { h: '무극심경', n: '無極心經', g: '極', type: 'sim', grade: 'hwagyeong', sect: null,
+    d: '끝이 없는 심법. 익힐수록 익힐 것이 늘어난다.', m: { cd: 0.09 } },
+
+  /* ── 내상(內傷) — 승천 12 이상에서 슬롯을 강제로 점유하는 저주 ── */
+  naesang: { h: '내상(內傷)', n: '內傷', g: '傷', type: 'cho', grade: 'samryu', sect: null, curse: true,
+    d: '경맥이 상했다. 이 자리에서는 어떤 초식도 펼 수 없다.',
+    pattern: 'none', dmg: 0, cd: 99, grow: [], color: '#5a4a3a' },
+};
+
+// ── 진화(進化) — 초식 대성(8) + 심법 보유 → 절세무공
+const EVOLUTIONS = {
+  maehwa_mangae: { from: 'maehwa_geom', needSim: 'jaha_singong',
+    h: '매화만개', n: '梅花滿開', g: '滿', type: 'cho', grade: 'jeolse', sect: 'hwasan', evolved: true,
+    d: '매화가 한꺼번에 만개한다. 꽃잎 하나하나가 검이다.',
+    pattern: 'nova', dmg: 46, cd: 1.15, count: 18, speed: 340, life: 1.7, pierce: 4,
+    status: { bleed: 14 }, grow: [], color: '#f090b8' },
+  taegeuk_yangui: { from: 'taegeuk_geom', needSim: 'yangui_simgong',
+    h: '태극양의', n: '太極兩儀', g: '儀', type: 'cho', grade: 'jeolse', sect: 'mudang', evolved: true,
+    d: '음양이 두 겹으로 돈다. 안으로 흘리고 밖으로 되받는다.',
+    pattern: 'orbit', dmg: 34, cd: 0.26, count: 8, radius: 104, spin: 2.6, dual: true, knock: 150,
+    grow: [], color: '#7ad0e8' },
+  yeorae_sinjang: { from: 'baekbo', needSim: 'geumgang_sg',
+    h: '여래신장', n: '如來神掌', g: '如', type: 'cho', grade: 'jeolse', sect: 'sorim', evolved: true,
+    d: '한 장(掌)에 산이 무너진다. 소림 천 년의 정점.',
+    pattern: 'nova', dmg: 82, cd: 2.0, count: 8, speed: 520, life: 1.6, pierce: 99, knock: 300,
+    grow: [], color: '#f0c060' },
+  guyu_binggi: { from: 'bingbaek', needSim: 'hyeoneum',
+    h: '구유빙기', n: '九幽氷氣', g: '幽', type: 'cho', grade: 'jeolse', sect: 'binggung', evolved: true,
+    d: '구천의 음기가 사위를 덮는다. 숨소리마저 얼어붙는다.',
+    pattern: 'field', dmg: 26, cd: 1.5, count: 3, radius: 165, life: 5.0, tick: 0.3,
+    status: { freeze: 1.4, freezeChance: 0.85, slow: 0.7, slowDur: 2.0 },
+    grow: [], color: '#a8e4ff' },
+  hyeolma_singong: { from: 'hyeoldo', needSim: 'hyeol_gong',
+    h: '혈마신공', n: '血魔神功', g: '血', type: 'cho', grade: 'jeolse', sect: 'hyeolgyo', evolved: true,
+    d: '혈마의 신공. 천 년을 산 자의 무공이다. 주위의 피가 그대에게 흐른다.',
+    pattern: 'aura', dmg: 40, cd: 0.28, radius: 158, lifesteal: 0.14, status: { bleed: 16 },
+    grow: [], color: '#d02040' },
+  cheonma_gullim: { from: 'cheonma_seom', needSim: 'cheonma_sg',
+    h: '천마군림', n: '天魔君臨', g: '君', type: 'cho', grade: 'jeolse', sect: 'cheonma', evolved: true,
+    d: '천마가 군림한다. 마기가 사위를 짓눌러 감히 다가서지 못한다.',
+    pattern: 'nova', dmg: 58, cd: 0.85, count: 14, speed: 620, life: 1.2, pierce: 8, knock: 120,
+    grow: [], color: '#f05070' },
+};
+// 진화 결과를 ARTS에 편입 (id로 동일하게 접근)
+for (const [id, e] of Object.entries(EVOLUTIONS)) ARTS[id] = Object.assign({ id }, e);
+for (const [id, a] of Object.entries(ARTS)) a.id = id;
+
+// 레벨 성장 — grow에 포함된 축만 자란다
+function artStat(id, lv) {
+  const a = ARTS[id];
+  const s = Object.assign({}, a);
+  s.status = a.status ? Object.assign({}, a.status) : null;
+  const L = lv - 1;
+  if (L > 0 && a.grow) {
+    if (a.grow.includes('dmg')) s.dmg = a.dmg * (1 + 0.30 * L);
+    if (a.grow.includes('count')) s.count = (a.count || 1) + ((L / 2) | 0);
+    if (a.grow.includes('cd')) s.cd = a.cd * Math.max(0.55, 1 - 0.055 * L);
+    if (a.grow.includes('radius')) s.radius = (a.radius || 60) * (1 + 0.09 * L);
+    if (a.grow.includes('pierce')) s.pierce = (a.pierce || 0) + ((L / 3) | 0);
+    if (a.grow.includes('life')) s.life = (a.life || 1) * (1 + 0.08 * L);
+  }
+  return s;
+}
+// 다음 단계에 무엇이 오르는지 — 카드 문구
+function artGrowText(id) {
+  const a = ARTS[id];
+  if (!a.grow || !a.grow.length) return '더 오를 곳이 없다';
+  const nm = { dmg: '피해', count: '수', cd: '속도', radius: '범위', pierce: '관통', life: '지속' };
+  return a.grow.map(k => nm[k]).join(' · ') + ' 상승';
+}
+const PATTERN_NAME = {
+  arc: '전방 참격', orbit: '호신 회전', shot: '직선 투사', homing: '유도 투사',
+  aura: '지속 오라', nova: '전방위 방사', beam: '관통 섬격', field: '지면 장판', none: '—',
+};
+
+/* ============================================================
+ *  5. 적(敵) — 한자 한 글자로 정체를 드러낸다
+ * ============================================================ */
+const KINDS = {
+  jol:   { g: '卒', h: '졸개',   hp: 1.0,  atk: 1.0,  spd: 70,  r: 12, xp: 1,  knockRes: 0 },
+  do:    { g: '徒', h: '문도',   hp: 2.2,  atk: 1.15, spd: 58,  r: 15, xp: 2,  knockRes: 0.25 },
+  ja:    { g: '刺', h: '자객',   hp: 0.7,  atk: 1.3,  spd: 118, r: 11, xp: 2,  knockRes: 0.1, dash: true },
+  sul:   { g: '術', h: '술사',   hp: 1.6,  atk: 1.5,  spd: 50,  r: 14, xp: 3,  knockRes: 0.2 },
+  ho:    { g: '護', h: '호법',   hp: 6.5,  atk: 1.6,  spd: 46,  r: 21, xp: 6,  knockRes: 0.7 },
+  jeong: { g: '精', h: '정예',   hp: 16,   atk: 1.9,  spd: 58,  r: 25, xp: 22, knockRes: 0.85, elite: true },
+};
+
+/* ============================================================
+ *  6. 권역(圈域) — 선택형 스테이지
+ * ============================================================ */
+// mainKind: surviveBoss(시간 생존 후 관문의 고수) / altarBoss(제단 파괴 후) / endless(무한 생존)
+const STAGES = [
+  {
+    id: 'heukpung', n: '黑風山', h: '흑풍산 산길', g: '風', faction: 'sapa',
+    d: '흑풍채 산적들이 길목을 점거했고, 그 사이로 사파(邪派)의 깃발이 나부낀다. 강호의 첫 관문.',
+    tint: '#2a2218', accent: '#5a4a2a', gimmick: null,
+    hp: 11, atk: 7, spawn: 1.5, survive: 360, mainKind: 'surviveBoss',
+    pool: [['jol', 12], ['ja', 3]], latePool: [['do', 5], ['sul', 2]],
+    boss: { h: '흑풍채주 적풍', t: '쌍도(雙刀) 거인', g: '楓', hpMul: 24, atkMul: 1.15,
+      line: '"내 목을 넘지 못하면, 천하는 꿈도 꾸지 마라."',
+      win: '적풍이 쌍도를 떨군다. "흑풍채는… 여기까지인가." 그대의 이름이 강호에 퍼지기 시작한다.' },
+    reward: { qi: 1.25, fame: 1.0 },
+  },
+  {
+    id: 'doksagok', n: '毒蛇谷', h: '독사곡', g: '毒', faction: 'sapa',
+    d: '독사곡(毒蛇谷)의 독무(毒霧)가 자욱하다. 발밑에서 독이 피어올라 오래 머물 수 없다.',
+    tint: '#1c2a18', accent: '#3a5a2a', gimmick: 'poison',
+    hp: 20, atk: 10, spawn: 1.8, survive: 480, mainKind: 'surviveBoss',
+    pool: [['jol', 10], ['sul', 5], ['ja', 3]], latePool: [['do', 6], ['ho', 2]],
+    boss: { h: '독화 대사', t: '독사곡의 주인', g: '華', hpMul: 38, atkMul: 1.20,
+      line: '"이름을 얻으려는 애송이여, 그대의 피로 내 독을 완성하리라."',
+      win: '독화 대사가 독무 속으로 스러진다. "독은… 결국 자신마저…" 독사곡의 안개가 걷힌다.' },
+    reward: { qi: 1.35, fame: 1.4 },
+  },
+  {
+    id: 'seolsan', n: '北雪山', h: '북방 설산', g: '雪', faction: 'binggung',
+    d: '서리 안개가 시야를 가린다. 얼어붙은 땅은 발을 붙들지 않아, 한 번 달리면 쉬이 멈추지 못한다.',
+    tint: '#1e2830', accent: '#4a7090', gimmick: 'ice',
+    hp: 34, atk: 14, spawn: 2.0, survive: 600, mainKind: 'surviveBoss',
+    pool: [['jol', 9], ['do', 6], ['ja', 4]], latePool: [['ho', 4], ['sul', 3]],
+    boss: { h: '빙궁 공주 설하', t: '북해의 서리', g: '霞', hpMul: 50, atkMul: 1.25,
+      line: '"따뜻한 피를 가진 자여, 이 설산에서 영원히 잠들라."',
+      win: '설하가 무릎을 꿇는다. "따뜻하구나… 이런 것이… 살아있다는…" 얼음이 녹아내린다.' },
+    reward: { qi: 1.8, fame: 2.0 },
+  },
+  {
+    id: 'hyeoldan', n: '血敎祭壇', h: '혈교 제단', g: '祭', faction: 'hyeolgyo',
+    d: '피비린내가 진동한다. 세 개의 제단이 끊임없이 신도를 불러낸다 — 제단을 부수지 않으면 끝이 없다.',
+    tint: '#2a1418', accent: '#7a1828', gimmick: 'altar',
+    hp: 46, atk: 17, spawn: 2.2, survive: 720, mainKind: 'altarBoss', altars: 3,
+    pool: [['jol', 8], ['sul', 6], ['ja', 5]], latePool: [['do', 6], ['ho', 4]],
+    boss: { h: '혈교주 적라찰', t: '천 년의 불사', g: '羅', hpMul: 66, atkMul: 1.30,
+      line: '"천 년을 살았다. 그대의 피로 천 년을 더 살리라."',
+      win: '적라찰의 불사(不死)가 마침내 끝난다. "천 년이… 이렇게…" 핏빛이 바랜다.' },
+    reward: { qi: 2.4, fame: 2.8 },
+  },
+  {
+    id: 'magyo', n: '魔敎本山', h: '마교 본산', g: '魔', faction: 'cheonma',
+    d: '마교 본산(本山)이다. 마기(魔氣)가 서린 땅에서는 상처가 아물지 않는다. 이곳에서 모든 세력이 충돌한다.',
+    tint: '#241018', accent: '#7a2038', gimmick: 'magi',
+    hp: 64, atk: 21, spawn: 2.4, survive: 900, mainKind: 'surviveBoss',
+    pool: [['do', 8], ['ja', 6], ['sul', 5]], latePool: [['ho', 6], ['jeong', 1]],
+    boss: { h: '마교의 마두', t: '옥좌의 마기', g: '頭', hpMul: 86, atkMul: 1.35,
+      line: '"천하 서열의 끝에 닿으려는 자가… 백 년 만이로구나. 자격이 있는지 — 보자."',
+      win: '마두가 옥좌 앞에 쓰러진다. "천하의 정점은… 이제 그대의 것…" 그 자리에 그대가 선다.' },
+    reward: { qi: 3.2, fame: 4.0 },
+  },
+  {
+    id: 'cheonoe', n: '天外關門', h: '천외의 관문', g: '外', faction: 'cheonma',
+    d: '구름 위의 계단이다. 하늘 밖에서 무언가가 끝없이 내려온다. 끝이 없으니, 어디까지 버티는지가 곧 기록이다.',
+    tint: '#181428', accent: '#4a3a7a', gimmick: 'void',
+    hp: 90, atk: 26, spawn: 2.8, survive: 1200, mainKind: 'endless',
+    pool: [['do', 7], ['ja', 7], ['ho', 4], ['sul', 4]], latePool: [['jeong', 2], ['ho', 6]],
+    boss: { h: '이름 없는 검객', t: '하늘 밖의 손님', g: '客', hpMul: 72, atkMul: 1.25,
+      line: '"…그대도, 여기까지 왔군."',
+      win: '검객이 검을 거둔다. "이 위에도, 또 있다." 하늘 밖의 하늘이 한 겹 벗겨졌다.' },
+    reward: { qi: 4.2, fame: 5.5 },
+    needRealm: 5,
+  },
+];
+
+// ── 부 미션(副任務) — 달성 시 씨앗·진기 보너스
+function stageSubs(i) {
+  const s = STAGES[i];
+  const killN = [200, 300, 420, 560, 760, 1100][i];
+  const lvN = [14, 18, 22, 26, 30, 36][i];
+  const base = [
+    { id: 'nohit', label: '피격 3회 이하로 격파', chk: R => R.won && R.hitCount <= 3 },
+    { id: 'kill', label: killN + '체 이상 참살', chk: R => R.kills >= killN },
+  ];
+  if (i === 0) base.push({ id: 'lv', label: '레벨 ' + lvN + ' 도달', chk: R => R.level >= lvN });
+  else if (i === 1) base.push({ id: 'noskip', label: '깨달음을 한 번도 버리지 않고 격파', chk: R => R.won && R.skips === 0 });
+  else if (i === 2) base.push({ id: 'fast', label: '관문의 고수를 30초 안에 격파', chk: R => R.won && R.t <= s.survive + 30 });
+  else if (i === 3) base.push({ id: 'evolve', label: '무공 하나를 진화시킨다', chk: R => R.evolved >= 1 });
+  else if (i === 4) base.push({ id: 'evolve2', label: '무공 둘을 진화시킨다', chk: R => R.evolved >= 2 });
+  else base.push({ id: 'lv', label: '레벨 ' + lvN + ' 도달', chk: R => R.level >= lvN });
+  return base;
+}
+function mainLabel(i) {
+  const s = STAGES[i];
+  if (s.mainKind === 'altarBoss') return '제단 ' + s.altars + '개를 부수고 ' + s.boss.h + ' 격파';
+  if (s.mainKind === 'endless') return mmss(s.survive) + ' 생존 (그 뒤로도 끝은 없다)';
+  return mmss(s.survive) + ' 생존 후 ' + s.boss.h + ' 격파';
+}
+
+/* ============================================================
+ *  7. 승천(昇天) 0~20 — index-3.html의 철학을 뱀서식으로
+ *  "스탯만 올리지 않는다. 압박의 종류를 단계마다 바꾼다."
+ * ============================================================ */
+const ASCENSIONS = [
+  '강호의 기본. 무명인의 첫 도전.',
+  '난입(亂入)이 잦아진다. 적이 더 빽빽하게 몰려온다.',
+  '적의 칼끝이 매서워진다. 공격력 ↑',
+  '관문의 고수가 살초를 아끼지 않는다.',
+  '적이 더 질기다. HP ↑',
+  '상처를 안고 오른다. 시작 命 -10%, 기(氣)를 끌어오는 반경 ↓',
+  '정예(精)가 무리에 섞인다. 붉은 눈을 조심하라.',
+  '적이 스러진 자리에 사기(邪氣)가 남는다. 시체 위를 걷지 마라.',
+  '깨달음이 좁아진다. 레벨업 선택지 3 → 2',
+  '영약이 인색하다. 회복 아이템 절반, 적 HP ↑',
+  '관문의 고수가 둘이다. 난입도 더 잦다.',
+  '적의 공격이 또 거세진다.',
+  '내상(內傷)을 안고 오른다. 초식 자리 하나를 쓸 수 없다.',
+  '정예가 흔해지고, 관문의 고수가 더 사납다.',
+  '기(氣) 구슬이 옅다. 경험 획득 -15%',
+  '정예가 호신강기를 두른다. 피해 30% 감쇄. 적 HP ↑',
+  '진기가 얼어붙는다. 첫 2분간 초식의 쿨다운 ↑',
+  '적의 수와 힘이 함께 오른다.',
+  '관문의 고수가 극에 이른다. 공격·HP ↑',
+  '내상이 깊어진다. 초식 자리 둘을 쓸 수 없고, 시작 命 -8%',
+  '천마의 시험. 모든 압박이 극에 달한다 — 정예가 넘치고, 고수는 강기를 두른다.',
+];
+function ascMods(lv) {
+  const m = {
+    spawn: 1, ehp: 1, eatk: 1, bhp: 1, batk: 1, startHp: 1, pickup: 1,
+    elite: 0, corpseField: false, choices: 3, healDrop: 1, twinBoss: false,
+    curse: 0, eliteArmor: 0, earlyCd: 1, gemValue: 1, bossShield: 0,
+  };
+  if (lv >= 1) m.spawn *= 1.12;
+  if (lv >= 2) m.eatk *= 1.10;
+  if (lv >= 3) m.batk *= 1.12;
+  if (lv >= 4) m.ehp *= 1.12;
+  if (lv >= 5) { m.startHp -= 0.10; m.pickup *= 0.85; }
+  if (lv >= 6) m.elite = 0.04;
+  if (lv >= 7) m.corpseField = true;
+  if (lv >= 8) m.choices = 2;
+  if (lv >= 9) { m.healDrop = 0.5; m.ehp *= 1.10; }
+  if (lv >= 10) { m.twinBoss = true; m.spawn *= 1.12; }
+  if (lv >= 11) m.eatk *= 1.12;
+  if (lv >= 12) m.curse = 1;
+  if (lv >= 13) { m.elite = 0.09; m.batk *= 1.10; }
+  if (lv >= 14) m.gemValue = 0.85;
+  if (lv >= 15) { m.eliteArmor = 0.30; m.ehp *= 1.10; }
+  if (lv >= 16) m.earlyCd = 1.35;
+  if (lv >= 17) { m.eatk *= 1.12; m.spawn *= 1.10; }
+  if (lv >= 18) { m.batk *= 1.12; m.bhp *= 1.15; }
+  if (lv >= 19) { m.curse = 2; m.startHp -= 0.08; }
+  if (lv >= 20) { m.spawn *= 1.15; m.eatk *= 1.10; m.bhp *= 1.20; m.elite = 0.15; m.eliteArmor = 0.30; m.bossShield = 0.25; }
+  return m;
+}
+
+/* ============================================================
+ *  8. 천하서열(天下序列) — 9존과 1신, 그 위는 무한
+ * ============================================================ */
+const NINE_THRONES = [
+  { id: 'amjon',    n: '暗尊', h: '암존', t: '그림자살왕',  faction: 'sapa',     fame: 2.5e3 },
+  { id: 'dokjon',   n: '毒尊', h: '독존', t: '만독지왕',    faction: 'sapa',     fame: 9e3 },
+  { id: 'hwanjon',  n: '幻尊', h: '환존', t: '천면환마',    faction: 'sapa',     fame: 3.2e4 },
+  { id: 'gwonjon',  n: '拳尊', h: '권존', t: '철권패왕',    faction: 'sapa',     fame: 1.1e5 },
+  { id: 'binghjon', n: '氷尊', h: '빙존', t: '북해설왕',    faction: 'binggung', fame: 3.8e5 },
+  { id: 'dojon',    n: '刀尊', h: '도존', t: '패도무적',    faction: 'sapa',     fame: 1.3e6 },
+  { id: 'hyeoljon', n: '血魔', h: '혈마', t: '혈교의 주인',  faction: 'hyeolgyo', fame: 4.5e6 },
+  { id: 'geomjon',  n: '劍尊', h: '검존', t: '천하제일검',  faction: 'sapa',     fame: 1.6e7 },
+  { id: 'magon',    n: '天魔', h: '천마', t: '마교의 정점',  faction: 'cheonma',  fame: 5.5e7 },
+  { id: 'cheonjon', n: '天尊', h: '천존', t: '강호의 정점',  faction: 'jeongpa',  fame: 2e8 },
+];
+const BEYOND_NAMES = ['無名尊', '虛空尊', '劫尊', '混元尊', '太始尊', '不可思議尊', '無量尊'];
+function throneAt(i) {
+  if (i < NINE_THRONES.length) return NINE_THRONES[i];
+  const j = i - NINE_THRONES.length;
+  const cyc = ((j / BEYOND_NAMES.length) | 0) + 1;
+  return {
+    id: 'beyond_' + j, n: BEYOND_NAMES[j % BEYOND_NAMES.length],
+    h: '하늘 밖의 ' + (j + 1) + '번째', t: '천외천 ' + cyc + '중의 주인',
+    faction: 'cheonma', fame: 2e8 * Math.pow(5.5, j + 1), beyond: true,
+  };
+}
+// 서열 도전은 경지도 요구한다 — 명성만으로는 존(尊)에 닿지 못한다
+function throneReq(i) { return { fame: throneAt(i).fame, realm: Math.min(3 + i, 30) }; }
+
+/* ============================================================
+ *  9. 강호 풍문(江湖風聞)
+ * ============================================================ */
+const RIVALS = ['남궁천', '독고월', '서문빙', '혈수라'];
+const RUMORS = [
+  { w: 3, k: '',       f: c => `"${c.rival}가 기연을 얻어 무공이 일취월장했다더군. 머잖아 큰 인물이 되겠어."` },
+  { w: 2, k: '',       f: c => `저잣거리 노인이 한숨짓는다. "${c.faction}의 세가 날로 커지니, 강호가 어지럽구나."` },
+  { w: 2, k: '',       f: c => `"요즘 ${c.region} 길목이 흉흉하다더군. 몸조심하게."` },
+  { w: 2, k: '',       f: c => `객잔의 술꾼이 중얼거린다. "${c.me}? 처음 듣는 이름인데."` },
+  { w: 2, k: '',       f: c => `"${c.rival}가 비무대회에서 이름을 떨쳤다네."` },
+  { w: 1, k: 'rare',   f: c => `강호에 소문이 돈다. "${c.jonA}이 ${c.jonB}과 겨뤄 우열을 가렸다더군…"` },
+  { w: 1, k: 'rare',   f: c => `"${c.jonA}이 ${c.region}에서 모습을 드러냈다네. 일대가 술렁인다더군."` },
+  { w: 1, k: 'rare',   f: c => `"${c.me}라는 ${c.realm}의 고수가 ${c.region}을 지나갔다더군."` },
+  { w: 1, k: 'legend', f: c => `천지가 한 번 울렸다. 누군가 하늘의 벽을 두드린 것이다.` },
+];
+
+/* ============================================================
+ *  10. 도(道)의 씨앗 — 환골탈태로 얻는 영구 성장
+ * ============================================================ */
+const SEEDS = {
+  ryeok:  { h: '力의 씨앗', g: '力', d: '무공 피해',          base: 1, mul: 1.9, eff: l => 1 + l * 0.22, txt: l => '피해 ×' + (1 + l * 0.22).toFixed(2) },
+  myeong: { h: '命의 씨앗', g: '命', d: '최대 命',            base: 1, mul: 1.9, eff: l => 1 + l * 0.22, txt: l => '命 ×' + (1 + l * 0.22).toFixed(2) },
+  gi:     { h: '氣의 씨앗', g: '氣', d: '진기 획득',          base: 1, mul: 2.0, eff: l => 1 + l * 0.32, txt: l => '진기 ×' + (1 + l * 0.32).toFixed(2) },
+  myeon:  { h: '名의 씨앗', g: '名', d: '명성 획득',          base: 1, mul: 2.1, eff: l => 1 + l * 0.36, txt: l => '명성 ×' + (1 + l * 0.36).toFixed(2) },
+  o:      { h: '悟의 씨앗', g: '悟', d: '런 시작 레벨',       base: 2, mul: 2.6, eff: l => l,            txt: l => '시작 Lv.' + (1 + l) },
+  cheon:  { h: '天의 씨앗', g: '天', d: '상위 재능 확률',      base: 3, mul: 3.0, eff: l => l * 1.2,      txt: l => '상위 재능 ×' + (1 + l * 1.2).toFixed(1) },
+  si:     { h: '始의 씨앗', g: '始', d: '환골탈태 후 시작 경지', base: 5, mul: 4.0, eff: l => l,          txt: l => '시작 경지 ' + realmName(l).h },
+};
+function seedCost(k, lv) { return Math.ceil(SEEDS[k].base * Math.pow(SEEDS[k].mul, lv)); }
+
+/* ============================================================
+ *  11. 메타 상태(狀態) — 런 밖에서 영구히 자라는 것
+ * ============================================================ */
+const SAVE_KEY = 'mumyeonghaeng_hyeollo_v1';
+let _mem = null;
+function storeGet() { try { const s = localStorage.getItem(SAVE_KEY); return s ? JSON.parse(s) : null; } catch (e) { return _mem; } }
+function storeSet(d) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } catch (e) { _mem = d; } }
+function storeClear() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} _mem = null; }
+
+let M = null;
+
+function newMeta(name, origin, talent, sect, carry) {
+  const seeds = carry ? (carry.seeds || {}) : {};
+  const startRealm = seeds.si ? SEEDS.si.eff(seeds.si) : 0;
+  const m = {
+    v: 1, name: name || '무명', origin, talent, sect,
+    realm: startRealm,
+    stats: { geunggol: 0, chebaek: 0, naegong: 0, sinbeop: 0, oseong: 0 },
+    base:  { geunggol: 0, chebaek: 0, naegong: 0, sinbeop: 0, oseong: 0 },
+    qi: 0, fame: 0,
+    thrones: 0,
+    stageClear: {},          // stageId → 클리어한 최고 승천
+    stageSubs: {},           // stageId → { subId: true }
+    bestTime: {},            // stageId → 최고 생존(초)
+    runs: 0, wins: 0, bestKills: 0,
+    // 영구(환골탈태 관통)
+    seeds, seedPoints: carry ? carry.seedPoints : 0,
+    rebirths: carry ? carry.rebirths : 0,
+    totalFame: carry ? carry.totalFame : 0,
+    bestRealmEver: carry ? Math.max(carry.bestRealmEver || 0, startRealm) : startRealm,
+    maxAscEver: carry ? (carry.maxAscEver || 0) : 0,
+    // 출신 효과
+    qiGain: 1, xpBonus: 1, pickupBonus: 1, extraArt: false,
+  };
+  const sb = SECTS[sect].bonus;
+  for (const k in sb) m.base[k] += sb[k];
+  ORIGINS[origin].apply(m);
+  return m;
+}
+
+function seedEff(k) {
+  const lv = (M.seeds && M.seeds[k]) || 0;
+  if (!lv) return (k === 'cheon' || k === 'si' || k === 'o') ? 0 : 1;
+  return SEEDS[k].eff(lv);
+}
+function sv(id) { return M.stats[id] + M.base[id]; }
+function statSum() { return STATS.reduce((s, st) => s + sv(st.id), 0); }
+
+// 능력치·재능·씨앗을 하나의 출전 명세로
+function loadout() {
+  const t = TALENTS[M.talent].m;
+  const gg = sv('geunggol'), cb = sv('chebaek'), ng = sv('naegong'), sb = sv('sinbeop'), os = sv('oseong');
+  return {
+    hpMax:      Math.round(118 * (1 + cb * 0.075) * (t.hp || 1) * seedEff('myeong')),
+    dmgMult:    (1 + gg * 0.05) * (t.dmg || 1) * seedEff('ryeok'),
+    cdMult:     (1 / (1 + ng * 0.02)) * (t.cd || 1),
+    countBonus: (ng / 25) | 0,
+    moveSpd:    170 * (1 + sb * 0.012) * (t.spd || 1),
+    dodge:      clamp(sb / (sb + 180) + (t.dodge || 0), 0, 0.60),
+    dr:         clamp(cb * 0.0028 + (t.dr || 0), 0, 0.55),
+    pickup:     80 * (1 + os * 0.02) * (t.pickup || 1) * (M.pickupBonus || 1),
+    xpMult:     (1 + os * 0.025) * (t.xp || 1) * (M.xpBonus || 1),
+    area:       (t.area || 1),
+    revive:     (t.revive || 0),
+    immunePoison: t.immunePoison ? 1 : 0,
+    bleedBonus: (t.bleed || 0),
+    startLevel: 1 + seedEff('o'),
+  };
+}
+
+// ── 경지 돌파
+function canBreak() { return M.fame >= realmReq(M.realm); }
+function doBreak() {
+  if (!canBreak()) return;
+  M.fame -= realmReq(M.realm);
+  M.realm++;
+  M.bestRealmEver = Math.max(M.bestRealmEver, M.realm);
+  const rn = realmName(M.realm);
+  Sound.play('breakthrough');
+  const newGrades = Object.entries(GRADES).filter(([, g]) => g.realm === M.realm).map(([, g]) => g.n);
+  const body = M.realm < REALMS.length
+    ? `단전이 한 번 크게 울린다. 막혀 있던 경맥이 트이고, 세상이 조금 더 느리게 보인다.<br><br>` +
+      `그대는 <span class="em">${rn.n} (${rn.h})</span>에 올랐다.<br><span class="note">${rn.d}</span><br><br>` +
+      `능력치 상한이 <b>${statCap(M.realm)}</b>으로 열렸다.` +
+      (newGrades.length ? `<br><span class="em">${newGrades.join('·')}</span> 등급의 무공을 읽을 수 있게 되었다.` : '')
+    : `천지가 진동한다. 하늘의 벽 하나를 또 두드려 부쉈다.<br><br><span class="em">${rn.n}</span><br>` +
+      `<span class="note">${rn.d}</span><br><br>능력치 상한 <b>${statCap(M.realm)}</b>.<br><br>` +
+      `<span class="note">천하제일에 오른들, 하늘 위에 또 하늘이 있다.</span>`;
+  openModal('境', '突破 · 돌파', body, [{ label: '내공을 고른다', cb: closeModal }]);
+  saveMeta(); renderHub();
+}
+
+// ── 서열 도전
+function myRank() {
+  if (M.thrones === 0) return { n: '無名', h: '무명인', d: '서열 밖. 이름조차 없다.' };
+  if (M.thrones >= NINE_THRONES.length) {
+    const j = M.thrones - NINE_THRONES.length;
+    return { n: '天外', h: '천외의 존재', d: `하늘 밖의 하늘을 ${j + 1}겹 벗겼다.` };
+  }
+  const t = NINE_THRONES[M.thrones - 1];
+  if (t.id === 'cheonjon') return { n: '神', h: '신(神)', d: '천하제일. 인간을 넘어섰다.' };
+  return { n: '尊', h: '존(尊)', d: `${t.h}을 넘어 천하 서열에 들었다.` };
+}
+function challengeThrone(i) {
+  if (i !== M.thrones) return;
+  const t = throneAt(i), req = throneReq(i);
+  if (M.fame < req.fame) { toast('명성이 모자라다. 강호가 그대를 모른다.'); return; }
+  if (M.realm < req.realm) {
+    openModal(t.n, t.h + ' · ' + t.t,
+      `${t.h}이 그대를 한 번 보고, 시선을 돌린다.<br><br>"…아직이다."<br><br>` +
+      `<span class="note">필요 경지 ${realmName(req.realm).h} / 그대 ${realmName(M.realm).h}</span>`,
+      [{ label: '물러난다', cb: closeModal }]);
+    return;
+  }
+  M.thrones++;
+  M.seedPoints += t.beyond ? 3 : 1;
+  const body = t.id === 'cheonjon'
+    ? `천존(天尊)이 검을 내린다.<br><br>"강호의 정점은 이제 그대의 것이다."<br><br>` +
+      `그 자리에 그대가 선다. 허나 고개를 들자 — 하늘 위에 또 하늘이 있다.<br><br>` +
+      `<span class="em">천외천(天外天)이 열렸다.</span> 씨앗 <b>+1</b>`
+    : t.beyond
+      ? `${t.n}이 스러진다.<br><br>"…이 위에도, 또 있다."<br><br>하늘 밖의 하늘이 다시 한 겹 벗겨졌다. 씨앗 <b>+3</b>`
+      : `${t.h}이 무릎을 꿇는다.<br><br>그대의 이름이 천하서열에 오른다 — <span class="em">${t.h}을 넘은 자</span>.<br><br>씨앗 <b>+1</b>`;
+  Sound.play('win');
+  openModal(t.n, '序列 · ' + t.h + ' 격파', body, [{ label: '다음 하늘로', cb: closeModal }]);
+  saveMeta(); renderHub();
+}
+
+// ── 환골탈태
+function canRebirth() { return M.realm >= 5; }
+function rebirthGain() {
+  if (!canRebirth()) return 0;
+  const clears = Object.values(M.stageClear).length;
+  return Math.max(1, Math.floor(Math.pow(M.realm - 4, 1.5) + M.thrones * 2 + clears + M.maxAscEver * 0.5));
+}
+function doRebirth() {
+  if (!canRebirth()) { toast('화경(化境)에 이르지 못했다. 아직 버릴 것이 없다.'); return; }
+  const gain = rebirthGain();
+  openModal('胎', '換骨奪胎 · 환골탈태',
+    `뼈를 바꾸고 태(胎)를 빼앗는다 — 지금의 경지와 능력치를 모두 버리고 무명(無名)으로 돌아간다.<br><br>` +
+    `남는 것은 <span class="em">도(道)의 씨앗 ${gain}</span>과, 두 번 걸어본 길의 기억뿐이다.<br><br>` +
+    `<span class="note">경지·능력치·진기·명성·서열이 초기화된다. 씨앗과 그 성장, 권역 클리어 기록은 남는다. 재능과 출신은 다시 추첨된다.</span>`,
+    [
+      { label: '버린다 (환골탈태)', cls: 'primary', cb: () => {
+        const carry = {
+          seeds: M.seeds, seedPoints: M.seedPoints + gain, rebirths: M.rebirths + 1,
+          totalFame: M.totalFame, bestRealmEver: Math.max(M.bestRealmEver, M.realm),
+          maxAscEver: M.maxAscEver,
+        };
+        const keepClear = M.stageClear, keepSubs = M.stageSubs, keepTime = M.bestTime;
+        const keepRuns = M.runs, keepWins = M.wins, keepKills = M.bestKills;
+        const talent = rollTalent(seedEff('cheon'));
+        const origin = pick(Object.keys(ORIGINS));
+        M = newMeta(M.name, origin, talent, M.sect, carry);
+        M.stageClear = keepClear; M.stageSubs = keepSubs; M.bestTime = keepTime;
+        M.runs = keepRuns; M.wins = keepWins; M.bestKills = keepKills;
+        const tt = TALENTS[talent], tier = TALENT_TIERS[tt.t];
+        closeModal();
+        openModal('生', '다시, 무명(無名)',
+          `숨을 들이켠다. 몸이 낯설다 — 새로 얻은 몸이다.<br><br>` +
+          `<span class="em" style="color:${tier.color}">${tier.n} ${tt.h}</span><br><span class="note">${tt.d}</span><br><br>` +
+          `출신: ${ORIGINS[origin].h}<br>회귀 <b>${M.rebirths}</b>번째 · 씨앗 <b>${M.seedPoints}</b>`,
+          [{ label: '다시 걷는다', cb: closeModal }]);
+        saveMeta(); renderHub();
+      } },
+      { label: '아직은 아니다', cb: closeModal },
+    ]);
+}
+
+function saveMeta() { if (M) storeSet(M); }
+function loadMeta() {
+  const d = storeGet();
+  if (!d || !d.name || !SECTS[d.sect] || !TALENTS[d.talent]) return null;
+  d.stats = d.stats || { geunggol: 0, chebaek: 0, naegong: 0, sinbeop: 0, oseong: 0 };
+  d.base = d.base || { geunggol: 0, chebaek: 0, naegong: 0, sinbeop: 0, oseong: 0 };
+  d.seeds = d.seeds || {}; d.seedPoints = d.seedPoints || 0; d.rebirths = d.rebirths || 0;
+  d.stageClear = d.stageClear || {}; d.stageSubs = d.stageSubs || {}; d.bestTime = d.bestTime || {};
+  d.qiGain = d.qiGain || 1; d.xpBonus = d.xpBonus || 1; d.pickupBonus = d.pickupBonus || 1;
+  d.thrones = d.thrones || 0; d.maxAscEver = d.maxAscEver || 0;
+  d.runs = d.runs || 0; d.wins = d.wins || 0; d.bestKills = d.bestKills || 0;
+  return d;
+}
+
+// 권역 해금 — 앞 권역을 승천 무관하게 한 번이라도 클리어했으면 열린다
+function stageUnlocked(i) {
+  const s = STAGES[i];
+  if (s.needRealm != null && M.realm < s.needRealm) return false;
+  if (i === 0) return true;
+  return M.stageClear[STAGES[i - 1].id] != null;
+}
+// 그 권역에서 고를 수 있는 최고 승천 — 클리어한 단계 +1까지
+function ascLimit(i) {
+  const c = M.stageClear[STAGES[i].id];
+  return c == null ? 0 : Math.min(20, c + 1);
+}
+
+/* ============================================================
+ *  12. 조율(調律) — 밸런스 상수. 여기만 만지면 난이도 곡선이 움직인다.
+ * ============================================================ */
+const TUNE = {
+  hpPow: 1.22, hpDiv: 80,      // 적 HP = base * (1 + t/hpDiv)^hpPow
+  atkDiv: 140,                 // 적 공격 = base * (1 + t/atkDiv)
+  bossHpK: 1.0,
+  spawnDiv: 60, spawnCap: 14, maxAlive: 380,
+  contactIv: 0.62,             // 피격 무적 시간
+  xpBase: 4, xpK: 3.0, xpPow: 1.35,
+  gemGrow: 0.006,
+  healChance: 0.012, healAmt: 0.22,
+  bigemChance: 1.0,            // 정예가 떨구는 비급 확률
+};
+function xpNeed(lv) { return Math.ceil(TUNE.xpBase + TUNE.xpK * Math.pow(lv, TUNE.xpPow)); }
+function hpScale(t) { return Math.pow(1 + t / TUNE.hpDiv, TUNE.hpPow); }
+function atkScale(t) { return 1 + t / TUNE.atkDiv; }
+
+/* ============================================================
+ *  13. 캔버스 · 카메라 · 프리렌더 스프라이트
+ * ============================================================ */
+const cv = document.getElementById('cv');
+const g2 = cv.getContext('2d');
+let VW = 360, VH = 640, DPR = 1;
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  VW = Math.max(1, window.innerWidth); VH = Math.max(1, window.innerHeight);
+  cv.width = Math.floor(VW * DPR); cv.height = Math.floor(VH * DPR);
+  g2.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+const cam = { x: 0, y: 0 };
+function sx(x) { return x - cam.x + VW * 0.5; }
+function sy(y) { return y - cam.y + VH * 0.5; }
+function normAng(a) { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += TAU; return a; }
+
+// ── 스프라이트 캐시: 부팅 후 한 번 그려 두고 매 프레임 drawImage만 한다.
+//    외부 에셋 0 — 한자 글리프와 절차생성 벡터가 전부다.
+const SPR = new Map();
+function makeCanvas(w, h) {
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h));
+  return c;
+}
+function enemySprite(kind, color, elite) {
+  const key = 'e|' + kind + '|' + color + '|' + (elite ? 1 : 0);
+  let s = SPR.get(key);
+  if (s) return s;
+  const k = KINDS[kind], r = k.r, pad = 5, size = (r + pad) * 2;
+  const c = makeCanvas(size, size), x = c.getContext('2d');
+  const cx = size / 2, cy = size / 2;
+  // 먹 실루엣 — 어두운 권역에서도 군집이 한눈에 읽혀야 한다.
+  // 배경(tint)과 대비가 없으면 뱀서류에서 위협 판독이 불가능해진다.
+  const grd = x.createRadialGradient(cx, cy - r * 0.3, r * 0.15, cx, cy, r);
+  grd.addColorStop(0, '#6a5847'); grd.addColorStop(0.65, '#3a2e24'); grd.addColorStop(1, '#181410');
+  x.fillStyle = grd;
+  x.beginPath(); x.arc(cx, cy, r, 0, TAU); x.fill();
+  // 진영 테두리 — 어떤 세력인지 색으로 즉시 구분
+  x.strokeStyle = color; x.lineWidth = elite ? 3 : 2.1;
+  x.shadowColor = color; x.shadowBlur = elite ? 9 : 4;
+  x.beginPath(); x.arc(cx, cy, r - 1, 0, TAU); x.stroke();
+  x.shadowBlur = 0;
+  // 한자 — 어두운 외곽선을 깔아 어떤 배경에서도 글자가 뜬다
+  x.font = '600 ' + Math.round(r * 1.4) + "px 'Ma Shan Zheng', serif";
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.lineWidth = 3; x.strokeStyle = 'rgba(12,9,6,0.9)';
+  x.strokeText(k.g, cx, cy + r * 0.06);
+  x.fillStyle = elite ? '#ffe4a8' : '#f6eeda';
+  x.fillText(k.g, cx, cy + r * 0.06);
+  if (elite) { x.shadowColor = color; x.shadowBlur = 10; x.fillText(k.g, cx, cy + r * 0.06); x.shadowBlur = 0; }
+  s = { c, r: r + pad };
+  SPR.set(key, s);
+  return s;
+}
+function bossSprite(glyph, color) {
+  const key = 'b|' + glyph + '|' + color;
+  let s = SPR.get(key);
+  if (s) return s;
+  const r = 42, pad = 12, size = (r + pad) * 2;
+  const c = makeCanvas(size, size), x = c.getContext('2d');
+  const cx = size / 2, cy = size / 2;
+  const grd = x.createRadialGradient(cx, cy - r * 0.3, r * 0.1, cx, cy, r);
+  grd.addColorStop(0, '#4a3a30'); grd.addColorStop(1, '#0e0c08');
+  x.fillStyle = grd; x.beginPath(); x.arc(cx, cy, r, 0, TAU); x.fill();
+  x.strokeStyle = color; x.lineWidth = 3.4;
+  x.beginPath(); x.arc(cx, cy, r - 1.5, 0, TAU); x.stroke();
+  x.globalAlpha = 0.5; x.lineWidth = 1.2;
+  x.beginPath(); x.arc(cx, cy, r + 6, 0, TAU); x.stroke();
+  x.globalAlpha = 1;
+  x.font = "600 46px 'Ma Shan Zheng', serif";
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.shadowColor = color; x.shadowBlur = 14;
+  x.fillStyle = '#f4e8d0'; x.fillText(glyph, cx, cy + 2);
+  s = { c, r: r + pad };
+  SPR.set(key, s);
+  return s;
+}
+// 투사체 — 꽃잎/검기/결정 등을 방향 없는 작은 스프라이트로
+function bulletSprite(color, rad, shape) {
+  const key = 'p|' + color + '|' + rad + '|' + shape;
+  let s = SPR.get(key);
+  if (s) return s;
+  const pad = 4, size = (rad + pad) * 2;
+  const c = makeCanvas(size, size), x = c.getContext('2d');
+  const cx = size / 2, cy = size / 2;
+  x.shadowColor = color; x.shadowBlur = rad * 1.6;
+  x.fillStyle = color;
+  if (shape === 'petal') {
+    x.beginPath();
+    x.moveTo(cx, cy - rad);
+    x.quadraticCurveTo(cx + rad, cy - rad * 0.2, cx, cy + rad);
+    x.quadraticCurveTo(cx - rad, cy - rad * 0.2, cx, cy - rad);
+    x.fill();
+  } else if (shape === 'shard') {
+    x.beginPath();
+    x.moveTo(cx, cy - rad); x.lineTo(cx + rad * 0.55, cy); x.lineTo(cx, cy + rad); x.lineTo(cx - rad * 0.55, cy);
+    x.closePath(); x.fill();
+  } else {
+    x.beginPath(); x.arc(cx, cy, rad, 0, TAU); x.fill();
+  }
+  s = { c, r: rad + pad };
+  SPR.set(key, s);
+  return s;
+}
+function shapeOf(art) {
+  if (!art) return 'dot';
+  if (art.sect === 'hwasan') return 'petal';
+  if (art.sect === 'binggung') return 'shard';
+  if (art.pattern === 'beam') return 'shard';
+  return 'dot';
+}
+
+/* ============================================================
+ *  14. 풀(Pool) — GC 스파이크를 막는다
+ * ============================================================ */
+function Pool(n, factory) {
+  this.a = new Array(n);
+  for (let i = 0; i < n; i++) { const o = factory(); o.alive = false; this.a[i] = o; }
+  this.cur = 0;
+}
+Pool.prototype.get = function () {
+  const a = this.a, n = a.length;
+  for (let k = 0; k < n; k++) {
+    const i = (this.cur + k) % n;
+    if (!a[i].alive) { this.cur = (i + 1) % n; a[i].alive = true; return a[i]; }
+  }
+  return null;
+};
+const P_ENEMY = new Pool(420, () => ({ x: 0, y: 0, hp: 0, hpMax: 0, atk: 0, kind: 'jol', r: 12, spd: 0,
+  freeze: 0, slow: 0, slowT: 0, bleed: 0, poison: 0, boss: false, elite: false, armor: 0,
+  glyph: '卒', color: '#888', flash: 0, knockX: 0, knockY: 0, knockRes: 0, dashT: 0, altar: false, xp: 1 }));
+const P_BULLET = new Pool(340, () => ({ x: 0, y: 0, vx: 0, vy: 0, dmg: 0, life: 0, pierce: 0, r: 6,
+  color: '#fff', shape: 'dot', homing: 0, target: null, status: null, knock: 0, spin: 0, ang: 0, artId: '' }));
+const P_GEM = new Pool(700, () => ({ x: 0, y: 0, vx: 0, vy: 0, xp: 0, kind: 0, pull: 0 }));
+const P_PART = new Pool(420, () => ({ x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 0, r: 0, color: '#fff' }));
+const P_FIELD = new Pool(60, () => ({ x: 0, y: 0, r: 0, life: 0, max: 0, dmg: 0, tick: 0, t: 0, color: '#fff', status: null, artId: '' }));
+const P_FX = new Pool(80, () => ({ kind: 'slash', x: 0, y: 0, ang: 0, r: 0, arc: 0, life: 0, max: 0, color: '#fff', len: 0, w: 0 }));
+const P_FLOAT = new Pool(40, () => ({ x: 0, y: 0, vy: 0, life: 0, max: 0, txt: '', color: '#fff', size: 12 }));
+
+/* ============================================================
+ *  15. 공간 해시(空間 해시) — 충돌 판정을 O(n)으로
+ * ============================================================ */
+const CELL = 76;
+const grid = new Map();
+function cellKey(cx, cy) { return ((cx + 8192) << 14) | (cy + 8192); }
+function rebuildGrid() {
+  grid.clear();
+  const a = P_ENEMY.a;
+  for (let i = 0; i < a.length; i++) {
+    const e = a[i];
+    if (!e.alive) continue;
+    const k = cellKey((e.x / CELL) | 0, (e.y / CELL) | 0);
+    let arr = grid.get(k);
+    if (!arr) { arr = []; grid.set(k, arr); }
+    arr.push(e);
+  }
+}
+// 원 안의 적을 순회. cb가 false를 반환하면 중단.
+function queryCircle(x, y, r, cb) {
+  const c0 = ((x - r) / CELL) | 0, c1 = ((x + r) / CELL) | 0;
+  const d0 = ((y - r) / CELL) | 0, d1 = ((y + r) / CELL) | 0;
+  const r2 = r * r;
+  for (let cx = c0; cx <= c1; cx++) {
+    for (let cy = d0; cy <= d1; cy++) {
+      const arr = grid.get(cellKey(cx, cy));
+      if (!arr) continue;
+      for (let i = 0; i < arr.length; i++) {
+        const e = arr[i];
+        if (!e.alive) continue;
+        const dx = e.x - x, dy = e.y - y;
+        if (dx * dx + dy * dy <= (r + e.r) * (r + e.r) || dx * dx + dy * dy <= r2) {
+          if (cb(e) === false) return;
+        }
+      }
+    }
+  }
+}
+function nearestEnemy(x, y, maxR) {
+  let best = null, bd = maxR * maxR;
+  const a = P_ENEMY.a;
+  for (let i = 0; i < a.length; i++) {
+    const e = a[i];
+    if (!e.alive || e.altar) continue;
+    const dx = e.x - x, dy = e.y - y, d = dx * dx + dy * dy;
+    if (d < bd) { bd = d; best = e; }
+  }
+  return best;
+}
+
+/* ============================================================
+ *  16. 런 상태(狀態)
+ * ============================================================ */
+let R = null;
+let running = false;
+
+function startRun(stageIdx, asc) {
+  const st = STAGES[stageIdx];
+  const lo = loadout();
+  const mods = ascMods(asc);
+  R = {
+    si: stageIdx, st, asc, mods, lo,
+    t: 0, kills: 0, level: lo.startLevel, xp: 0, xpNext: xpNeed(lo.startLevel),
+    hpBase: Math.round(lo.hpMax * Math.max(0.3, mods.startHp)),
+    hpMax: 0, hp: 0,
+    px: 0, py: 0, vx: 0, vy: 0, face: 0,
+    cho: [], sim: [],
+    hitCount: 0, skips: 0, evolved: 0, won: false, over: false, paused: false,
+    pendingLevels: 0, invuln: 0, revived: false,
+    bossSpawned: 0, boss: null, bossDeadAt: -1,
+    altarsLeft: st.mainKind === 'altarBoss' ? st.altars : 0,
+    mainDone: false, spawnAcc: 0, dmgBy: {},
+    shake: 0, gimTick: 0,
+  };
+  R.hpMax = R.hpBase; R.hp = R.hpBase;
+  cam.x = 0; cam.y = 0;
+
+  // 시작 초식 — 문파 입문 무공
+  addArt(SECTS[M.sect].startCho, true);
+  addArt('mumyeong_unki', true);
+  if (M.extraArt) {
+    const cand = availableArts('cho').filter(id => id !== SECTS[M.sect].startCho);
+    if (cand.length) addArt(pick(cand), true);
+  }
+  // 내상(內傷) — 승천 12/19
+  for (let i = 0; i < mods.curse; i++) if (R.cho.length < 6) R.cho.push({ id: 'naesang', lv: 1, t: 99, ang: 0 });
+
+  // 풀 비우기
+  for (const p of [P_ENEMY, P_BULLET, P_GEM, P_PART, P_FIELD, P_FX, P_FLOAT]) for (const o of p.a) o.alive = false;
+
+  // 제단(祭壇)
+  if (st.mainKind === 'altarBoss') {
+    for (let i = 0; i < st.altars; i++) {
+      const a = P_ENEMY.get();
+      if (!a) break;
+      const ang = (i / st.altars) * TAU + rand(-0.3, 0.3), d = rand(420, 620);
+      a.x = Math.cos(ang) * d; a.y = Math.sin(ang) * d;
+      a.altar = true; a.boss = false; a.elite = false;
+      a.hpMax = a.hp = st.hp * 260 * mods.ehp; a.atk = 0; a.spd = 0; a.r = 30;
+      a.kind = 'ho'; a.glyph = '壇'; a.color = FACTIONS[st.faction].color;
+      a.freeze = a.slow = a.bleed = a.poison = 0; a.flash = 0; a.knockRes = 1; a.xp = 40;
+      a.spawnT = 2;
+    }
+  }
+  recalc();
+  M.runs++;
+  running = true;
+  showScreen(null);
+  document.getElementById('hud').classList.add('on');
+  document.getElementById('hud-arts').classList.add('on');
+  document.getElementById('pause-btn').classList.add('on');
+  renderSlots();
+  Sound.unlock();
+}
+
+// ── 무공 습득/강화
+function addArt(id, silent) {
+  const a = ARTS[id];
+  const list = a.type === 'sim' ? R.sim : R.cho;
+  const cur = list.find(s => s.id === id);
+  if (cur) { cur.lv = Math.min(a.type === 'sim' ? SIM_MAX : ART_MAX, cur.lv + 1); }
+  else {
+    if (list.length >= 6) return false;
+    list.push({ id, lv: 1, t: 0, ang: 0 });
+  }
+  recalc();
+  if (!silent) renderSlots();
+  return true;
+}
+function evolveArt(evoId) {
+  const e = EVOLUTIONS[evoId];
+  const idx = R.cho.findIndex(s => s.id === e.from);
+  if (idx < 0) return;
+  R.cho[idx] = { id: evoId, lv: 1, t: 0, ang: 0 };
+  R.evolved++;
+  Sound.play('evolve');
+  recalc(); renderSlots();
+}
+function availableArts(type) {
+  return Object.keys(ARTS).filter(id => {
+    const a = ARTS[id];
+    if (a.type !== type || a.curse || a.evolved) return false;
+    if (GRADES[a.grade].realm > M.realm) return false;
+    if (a.sect && a.sect !== M.sect && SECTS[a.sect].faction !== SECTS[M.sect].faction) return false;
+    return true;
+  });
+}
+
+// ── 심법 + 이번 판에 다진 능력치 합산
+function recalc() {
+  const lo = R.lo;
+  const rs = R.rs || (R.rs = { geunggol: 0, chebaek: 0, naegong: 0, sinbeop: 0, oseong: 0 });
+  const agg = {
+    dmg: lo.dmgMult, cd: lo.cdMult, hpMul: 1, spd: lo.moveSpd, pickup: lo.pickup,
+    xp: lo.xpMult, dr: lo.dr, dodge: lo.dodge, area: lo.area,
+    lifesteal: 0, freezeDur: 0, count: lo.countBonus, bleed: lo.bleedBonus,
+  };
+  for (const s of R.sim) {
+    const m = ARTS[s.id].m; if (!m) continue;
+    const L = s.lv;
+    if (m.dmg) agg.dmg *= 1 + m.dmg * L;
+    if (m.hp) agg.hpMul *= 1 + m.hp * L;
+    if (m.cd) agg.cd *= Math.max(0.32, 1 - m.cd * L);
+    if (m.spd) agg.spd *= 1 + m.spd * L;
+    if (m.pickup) agg.pickup *= 1 + m.pickup * L;
+    if (m.xp) agg.xp *= 1 + m.xp * L;
+    if (m.dr) agg.dr = clamp(agg.dr + m.dr * L, 0, 0.72);
+    if (m.dodge) agg.dodge = clamp(agg.dodge + m.dodge * L, 0, 0.72);
+    if (m.area) agg.area *= 1 + m.area * L;
+    if (m.lifesteal) agg.lifesteal += m.lifesteal * L;
+    if (m.freezeDur) agg.freezeDur += m.freezeDur * L;
+  }
+  // 레벨업에서 고른 능력치 카드 — 이 판에만, 무한히 겹친다
+  if (rs.geunggol) agg.dmg *= 1 + 0.10 * rs.geunggol;
+  if (rs.chebaek) agg.hpMul *= 1 + 0.10 * rs.chebaek;
+  if (rs.naegong) agg.cd *= Math.pow(0.94, rs.naegong);
+  if (rs.sinbeop) agg.spd *= 1 + 0.08 * rs.sinbeop;
+  if (rs.oseong) { agg.pickup *= 1 + 0.18 * rs.oseong; agg.xp *= 1 + 0.08 * rs.oseong; }
+  const nm = Math.max(1, Math.round(R.hpBase * agg.hpMul));
+  if (nm !== R.hpMax) { const d = nm - R.hpMax; R.hpMax = nm; R.hp = clamp(R.hp + Math.max(0, d), 1, nm); }
+  R.agg = agg;
+}
+
+/* ============================================================
+ *  17. 입력(操作) — 이동만. 공격은 전부 자동.
+ * ============================================================ */
+const keys = Object.create(null);
+window.addEventListener('keydown', e => {
+  keys[e.key.toLowerCase()] = true;
+  if (e.key === 'Escape' && running && !R.over) togglePause();
+  if ([' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+const touch = { on: false, id: -1, ox: 0, oy: 0, dx: 0, dy: 0 };
+const stickEl = document.getElementById('stick'), knobEl = document.getElementById('stick-knob');
+cv.addEventListener('touchstart', e => {
+  const t = e.changedTouches[0];
+  touch.on = true; touch.id = t.identifier; touch.ox = t.clientX; touch.oy = t.clientY;
+  touch.dx = 0; touch.dy = 0;
+  stickEl.style.left = t.clientX + 'px'; stickEl.style.top = t.clientY + 'px';
+  stickEl.classList.add('on');
+  Sound.unlock();
+  e.preventDefault();
+}, { passive: false });
+cv.addEventListener('touchmove', e => {
+  for (const t of e.changedTouches) {
+    if (t.identifier !== touch.id) continue;
+    let dx = t.clientX - touch.ox, dy = t.clientY - touch.oy;
+    const d = Math.hypot(dx, dy), max = 46;
+    if (d > max) { dx = dx / d * max; dy = dy / d * max; }
+    touch.dx = dx / max; touch.dy = dy / max;
+    knobEl.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+  }
+  e.preventDefault();
+}, { passive: false });
+function endTouch(e) {
+  for (const t of e.changedTouches) if (t.identifier === touch.id) {
+    touch.on = false; touch.id = -1; touch.dx = touch.dy = 0;
+    knobEl.style.transform = ''; stickEl.classList.remove('on');
+  }
+}
+cv.addEventListener('touchend', endTouch);
+cv.addEventListener('touchcancel', endTouch);
+
+function inputVec() {
+  let dx = 0, dy = 0;
+  if (keys['a'] || keys['arrowleft']) dx -= 1;
+  if (keys['d'] || keys['arrowright']) dx += 1;
+  if (keys['w'] || keys['arrowup']) dy -= 1;
+  if (keys['s'] || keys['arrowdown']) dy += 1;
+  if (touch.on) { dx += touch.dx; dy += touch.dy; }
+  const d = Math.hypot(dx, dy);
+  if (d > 1) { dx /= d; dy /= d; }
+  return { x: dx, y: dy, m: Math.min(1, d) };
+}
+
+/* ============================================================
+ *  18. 무공 발동 — 8종 패턴
+ * ============================================================ */
+function addFX(kind, x, y, ang, r, arc, life, color, len, w) {
+  const f = P_FX.get(); if (!f) return;
+  f.kind = kind; f.x = x; f.y = y; f.ang = ang; f.r = r; f.arc = arc;
+  f.life = f.max = life; f.color = color; f.len = len || 0; f.w = w || 0;
+}
+function addFloat(x, y, txt, color, size) {
+  const f = P_FLOAT.get(); if (!f) return;
+  f.x = x; f.y = y; f.vy = -34; f.life = f.max = 0.7; f.txt = String(txt); f.color = color; f.size = size || 12;
+}
+function addParts(x, y, n, color, spd, r) {
+  for (let i = 0; i < n; i++) {
+    const p = P_PART.get(); if (!p) return;
+    const a = Math.random() * TAU, v = rand(spd * 0.35, spd);
+    p.x = x; p.y = y; p.vx = Math.cos(a) * v; p.vy = Math.sin(a) * v;
+    p.life = p.max = rand(0.25, 0.55); p.r = rand(r * 0.5, r); p.color = color;
+  }
+}
+
+function spawnBullet(x, y, vx, vy, dmg, s, a, homing) {
+  const b = P_BULLET.get(); if (!b) return null;
+  b.x = x; b.y = y; b.vx = vx; b.vy = vy;
+  b.dmg = dmg; b.life = (s.life || 1.2); b.pierce = (s.pierce || 0);
+  b.r = (a.pattern === 'beam' ? 8 : 7) * Math.sqrt(R.agg.area);
+  b.color = a.color; b.shape = shapeOf(a); b.status = s.status || null;
+  b.knock = s.knock || 0; b.homing = homing || 0; b.target = null;
+  b.ang = Math.atan2(vy, vx); b.spin = rand(-8, 8); b.artId = a.id;
+  return b;
+}
+
+function firePattern(a, s, slot) {
+  const dm = s.dmg * R.agg.dmg;
+  const area = R.agg.area;
+  const extra = (a.pattern === 'arc' || a.pattern === 'aura' || a.pattern === 'orbit') ? 0 : R.agg.count;
+  const cnt = Math.max(1, (s.count || 1) + extra);
+  switch (a.pattern) {
+    case 'arc': {
+      const r = (s.radius || 62) * area, half = (s.arc || 1.6) / 2;
+      // 조준은 이동 방향이 아니라 가장 가까운 적을 향한다.
+      // 조작이 이동뿐인 게임에서 참격이 등 뒤의 적을 못 베면 근접 무공은 무용지물이 된다.
+      const t = nearestEnemy(R.px, R.py, r * 1.35);
+      const aim = t ? Math.atan2(t.y - R.py, t.x - R.px) : R.face;
+      queryCircle(R.px, R.py, r, e => {
+        const d = Math.abs(normAng(Math.atan2(e.y - R.py, e.x - R.px) - aim));
+        if (d <= half) hitEnemy(e, dm, a.id, s.status, s.knock || 0, R.px, R.py);
+      });
+      addFX('slash', R.px, R.py, aim, r, s.arc || 1.6, 0.18, a.color);
+      Sound.play('swing');
+      break;
+    }
+    case 'orbit': {
+      const base = (s.radius || 70) * area, orbR = 15 * Math.sqrt(area);
+      const n = Math.max(1, (s.count || 2));
+      for (let i = 0; i < n; i++) {
+        const inner = s.dual && (i % 2 === 1);
+        const rr = inner ? base * 0.58 : base;
+        const ang = slot.ang * (inner ? -1 : 1) + (i / n) * TAU;
+        const ox = R.px + Math.cos(ang) * rr, oy = R.py + Math.sin(ang) * rr;
+        queryCircle(ox, oy, orbR, e => hitEnemy(e, dm, a.id, s.status, s.knock || 0, ox, oy));
+      }
+      break;
+    }
+    case 'shot': {
+      const spread = s.spread || 0.3;
+      const t = nearestEnemy(R.px, R.py, 520);
+      const aim = t ? Math.atan2(t.y - R.py, t.x - R.px) : R.face;
+      for (let i = 0; i < cnt; i++) {
+        const off = cnt === 1 ? 0 : (i / (cnt - 1) - 0.5) * spread * Math.min(3, cnt);
+        const ang = aim + off;
+        spawnBullet(R.px, R.py, Math.cos(ang) * s.speed, Math.sin(ang) * s.speed, dm, s, a, 0);
+      }
+      Sound.play('swing');
+      break;
+    }
+    case 'homing': {
+      const seen = [];
+      for (let i = 0; i < cnt; i++) {
+        let t = null, bd = 620 * 620;
+        const arr = P_ENEMY.a;
+        for (let j = 0; j < arr.length; j++) {
+          const e = arr[j];
+          if (!e.alive || seen.indexOf(e) >= 0) continue;
+          const dx = e.x - R.px, dy = e.y - R.py, d = dx * dx + dy * dy;
+          if (d < bd) { bd = d; t = e; }
+        }
+        const ang = t ? Math.atan2(t.y - R.py, t.x - R.px) : R.face + rand(-1, 1);
+        const b = spawnBullet(R.px, R.py, Math.cos(ang) * s.speed, Math.sin(ang) * s.speed, dm, s, a, 1);
+        if (b) { b.target = t; if (t) seen.push(t); }
+      }
+      break;
+    }
+    case 'nova': {
+      const base = Math.random() * TAU;
+      for (let i = 0; i < cnt; i++) {
+        const ang = base + (i / cnt) * TAU;
+        spawnBullet(R.px, R.py, Math.cos(ang) * s.speed, Math.sin(ang) * s.speed, dm, s, a, 0);
+      }
+      addFX('ring', R.px, R.py, 0, 30 * area, 0, 0.28, a.color);
+      Sound.play('pierce');
+      break;
+    }
+    case 'beam': {
+      const range = (s.range || 600) * area, w = (s.radius || 22) * Math.sqrt(area);
+      for (let i = 0; i < cnt; i++) {
+        let ang;
+        if (i === 0) { const t = nearestEnemy(R.px, R.py, 1200); ang = t ? Math.atan2(t.y - R.py, t.x - R.px) : R.face; }
+        else ang = R.face + (i / cnt) * TAU;
+        const cs = Math.cos(ang), sn = Math.sin(ang);
+        // 선분 판정: 진행 축 투영이 [0,range], 수직 거리가 w 이내
+        const cx = R.px + cs * range * 0.5, cy = R.py + sn * range * 0.5;
+        queryCircle(cx, cy, range * 0.5 + w, e => {
+          const dx = e.x - R.px, dy = e.y - R.py;
+          const proj = dx * cs + dy * sn;
+          if (proj < -e.r || proj > range) return;
+          const perp = Math.abs(-dx * sn + dy * cs);
+          if (perp <= w + e.r) hitEnemy(e, dm, a.id, s.status, s.knock || 0, R.px, R.py);
+        });
+        addFX('beam', R.px, R.py, ang, w, 0, s.life || 0.26, a.color, range);
+      }
+      Sound.play('pierce');
+      break;
+    }
+    case 'field': {
+      for (let i = 0; i < cnt; i++) {
+        const f = P_FIELD.get(); if (!f) break;
+        let tx = R.px, ty = R.py;
+        const t = nearestEnemy(R.px, R.py, 460);
+        if (t) { tx = t.x + rand(-40, 40); ty = t.y + rand(-40, 40); }
+        else { const ang = Math.random() * TAU, d = rand(40, 160); tx = R.px + Math.cos(ang) * d; ty = R.py + Math.sin(ang) * d; }
+        f.x = tx; f.y = ty; f.r = (s.radius || 80) * area;
+        f.life = f.max = s.life || 3; f.dmg = dm; f.tick = s.tick || 0.4; f.t = 0;
+        f.color = a.color; f.status = s.status || null; f.artId = a.id; f.hostile = false;
+      }
+      break;
+    }
+    case 'aura': {
+      const r = (s.radius || 110) * area;
+      let healed = 0;
+      queryCircle(R.px, R.py, r, e => {
+        hitEnemy(e, dm, a.id, s.status, 0, R.px, R.py);
+        healed += dm;
+      });
+      const ls = (s.lifesteal || 0) + R.agg.lifesteal;
+      if (ls > 0 && healed > 0) healPlayer(healed * ls * 0.12);
+      addFX('aura', R.px, R.py, 0, r, 0, 0.22, a.color);
+      break;
+    }
+  }
+}
+
+function fireArts(dt) {
+  for (const slot of R.cho) {
+    const a = ARTS[slot.id];
+    if (!a || a.pattern === 'none') continue;
+    const s = artStat(slot.id, slot.lv);
+    if (a.pattern === 'orbit') slot.ang += (s.spin || 2) * dt;
+    let cd = s.cd * R.agg.cd;
+    if (R.t < 120) cd *= R.mods.earlyCd;
+    slot.t -= dt;
+    if (slot.t > 0) continue;
+    slot.t = Math.max(0.05, cd);
+    firePattern(a, s, slot);
+  }
+}
+
+/* ============================================================
+ *  19. 피해 · 사망
+ * ============================================================ */
+function hitEnemy(e, dmg, artId, status, knock, fromX, fromY) {
+  if (!e.alive || e.hp <= 0) return;
+  let d = dmg;
+  if (e.armor > 0) d *= (1 - e.armor);
+  e.hp -= d; e.flash = 0.09;
+  R.dmgBy[artId] = (R.dmgBy[artId] || 0) + d;
+  if (status) {
+    if (status.bleed) e.bleed += status.bleed * (1 + R.agg.bleed * 6) * R.agg.dmg * 0.4;
+    if (status.poison) e.poison += status.poison * R.agg.dmg * 0.4;
+    if (status.freeze && (!status.freezeChance || Math.random() < status.freezeChance)) {
+      e.freeze = Math.max(e.freeze, status.freeze + R.agg.freezeDur);
+      Sound.play('freeze');
+    }
+    if (status.slow) { e.slow = Math.max(e.slow, status.slow); e.slowT = Math.max(e.slowT, status.slowDur || 1); }
+  }
+  if (knock > 0 && e.knockRes < 1) {
+    const dx = e.x - fromX, dy = e.y - fromY, dl = Math.hypot(dx, dy) || 1;
+    const k = knock * (1 - e.knockRes);
+    e.knockX += dx / dl * k; e.knockY += dy / dl * k;
+  }
+  if (R.agg.lifesteal > 0) healPlayer(d * R.agg.lifesteal * 0.08);
+  if (e.hp <= 0) killEnemy(e);
+  else if (e.boss) addFloat(e.x + rand(-10, 10), e.y - e.r - 4, Math.round(d), '#ffd0a0', 11);
+  else Sound.play('hit');
+}
+
+function killEnemy(e) {
+  e.alive = false;
+  addParts(e.x, e.y, e.boss ? 26 : e.elite ? 14 : 5, e.boss ? '#f0c060' : e.color, e.boss ? 260 : 140, e.boss ? 5 : 3);
+  Sound.play('enemyDead');
+  if (e.altar) {
+    R.altarsLeft--;
+    addFloat(e.x, e.y - 20, '제단 파괴', '#f0c060', 14);
+    toast('제단이 부서졌다. 남은 제단 ' + R.altarsLeft + '개.');
+    dropGem(e.x, e.y, e.xp * 3, 0);
+    return;
+  }
+  R.kills++;
+  if (e.boss) { onBossDead(e); return; }
+  // 기(氣) 구슬
+  dropGem(e.x, e.y, e.xp, 0);
+  // 영약(회복단)
+  if (Math.random() < TUNE.healChance * R.mods.healDrop) dropGem(e.x + rand(-8, 8), e.y + rand(-8, 8), 0, 1);
+  // 정예는 비급(秘笈)을 떨군다 — 즉시 깨달음
+  if (e.elite && Math.random() < TUNE.bigemChance) dropGem(e.x, e.y, 0, 2);
+  // 승천 7 — 시체 자리에 사기(邪氣)가 남는다
+  if (R.mods.corpseField && Math.random() < 0.10) {
+    const f = P_FIELD.get();
+    if (f) {
+      f.x = e.x; f.y = e.y; f.r = 34; f.life = f.max = 3.2; f.dmg = e.atk * 0.5;
+      f.tick = 0.5; f.t = 0; f.color = '#7a5a8a'; f.status = null; f.artId = ''; f.hostile = true;
+    }
+  }
+}
+function dropGem(x, y, xp, kind) {
+  const g = P_GEM.get(); if (!g) return;
+  g.x = x; g.y = y; g.vx = rand(-20, 20); g.vy = rand(-20, 20);
+  g.xp = xp; g.kind = kind; g.pull = 0;
+}
+function healPlayer(v) {
+  if (R.st.gimmick === 'magi') v *= 0.4;   // 마기 서린 땅 — 상처가 아물지 않는다
+  R.hp = Math.min(R.hpMax, R.hp + v);
+}
+function hurtPlayer(amount) {
+  if (R.invuln > 0 || R.over) return;
+  if (Math.random() < R.agg.dodge) { addFloat(R.px, R.py - 22, '避', '#9ad8f0', 13); return; }
+  const d = amount * (1 - R.agg.dr);
+  R.hp -= d;
+  R.hitCount++;
+  R.invuln = TUNE.contactIv;
+  R.shake = Math.min(14, R.shake + 7);
+  Sound.play('hurt');
+  addFloat(R.px, R.py - 24, '-' + Math.round(d), '#e07070', 13);
+  if (R.hp <= 0) {
+    if (R.lo.revive && !R.revived) {
+      R.revived = true; R.hp = R.hpMax * 0.55; R.invuln = 2.2;
+      addFloat(R.px, R.py - 34, '不死', '#f0c060', 20);
+      Sound.play('breakthrough');
+      toast('불사지체(不死之體) — 한 번 더 일어선다.');
+    } else endRun(false);
+  }
+}
+
+/* ============================================================
+ *  20. 적 생성 · 관문의 고수
+ * ============================================================ */
+function aliveEnemies() {
+  let n = 0; const a = P_ENEMY.a;
+  for (let i = 0; i < a.length; i++) if (a[i].alive && !a[i].altar) n++;
+  return n;
+}
+function pickKind() {
+  const st = R.st;
+  const table = R.t > st.survive * 0.45 ? st.pool.concat(st.latePool) : st.pool;
+  let tot = 0; for (const p of table) tot += p[1];
+  let x = Math.random() * tot;
+  for (const p of table) { x -= p[1]; if (x <= 0) return p[0]; }
+  return table[0][0];
+}
+function spawnOne() {
+  if (aliveEnemies() >= TUNE.maxAlive) return;
+  const e = P_ENEMY.get(); if (!e) return;
+  const st = R.st, m = R.mods;
+  let kind = pickKind();
+  let elite = KINDS[kind].elite || (m.elite > 0 && Math.random() < m.elite);
+  if (elite && !KINDS[kind].elite) kind = 'jeong';
+  const k = KINDS[kind];
+  // 화면 모양에 맞춘 타원으로 생성한다. 정원으로 두면 세로 화면에서 좌우 적이
+  // 필요 이상으로 멀어져 초반이 텅 빈다.
+  const ang = Math.random() * TAU;
+  const rx = VW * 0.60 + rand(30, 90), ry = VH * 0.60 + rand(30, 90);
+  e.x = R.px + Math.cos(ang) * rx; e.y = R.py + Math.sin(ang) * ry;
+  e.kind = kind; e.glyph = k.g; e.r = k.r;
+  e.hpMax = e.hp = st.hp * k.hp * hpScale(R.t) * m.ehp;
+  e.atk = st.atk * k.atk * atkScale(R.t) * m.eatk;
+  e.spd = k.spd * (st.gimmick === 'void' ? 1.18 : 1);
+  e.knockRes = k.knockRes;
+  e.elite = !!k.elite; e.boss = false; e.altar = false;
+  e.armor = e.elite ? m.eliteArmor : 0;
+  e.color = FACTIONS[st.faction].color;
+  e.freeze = 0; e.slow = 0; e.slowT = 0; e.bleed = 0; e.poison = 0;
+  e.flash = 0; e.knockX = 0; e.knockY = 0; e.dashT = rand(1, 3); e.xp = k.xp;
+  e.spawnT = 0;
+}
+function spawnBoss(idx) {
+  const st = R.st, m = R.mods, b = st.boss;
+  const e = P_ENEMY.get(); if (!e) return null;
+  const wave = R.bossSpawned;   // 반복 등장 시 강화
+  const esc = Math.pow(1.55, wave);
+  const ang = Math.random() * TAU;
+  e.x = R.px + Math.cos(ang) * (VW * 0.55 + 40); e.y = R.py + Math.sin(ang) * (VH * 0.55 + 40);
+  e.kind = 'ho'; e.glyph = b.g; e.r = 34;
+  e.hpMax = e.hp = st.hp * b.hpMul * TUNE.bossHpK * hpScale(R.t) * m.bhp * esc;
+  e.atk = st.atk * b.atkMul * atkScale(R.t) * m.batk * Math.pow(1.2, wave);
+  // 고수는 빨라야 한다. 느리면 그냥 도망쳐 무시할 수 있고, 그러면 권역이 끝나지 않는다.
+  e.spd = e.spd0 = 95 + wave * 6; e.knockRes = 0.94;
+  e.age = 0; e.atk0 = e.atk; e.raged = false;
+  e.boss = true; e.elite = false; e.altar = false;
+  e.armor = m.bossShield;
+  e.color = FACTIONS[st.faction].color;
+  e.freeze = 0; e.slow = 0; e.slowT = 0; e.bleed = 0; e.poison = 0;
+  e.flash = 0; e.knockX = 0; e.knockY = 0; e.dashT = 0; e.xp = 120;
+  e.spawnT = 5;
+  return e;
+}
+function announceBoss() {
+  const b = R.st.boss;
+  const el = document.getElementById('boss-banner');
+  el.querySelector('.bb-glyph').textContent = b.g;
+  el.querySelector('.bb-name').textContent = b.h + ' · ' + b.t;
+  el.querySelector('.bb-line').textContent = b.line;
+  el.classList.add('on');
+  setTimeout(() => el.classList.remove('on'), 3600);
+  document.getElementById('boss-hp').classList.add('on');
+  document.getElementById('boss-hp').querySelector('.bh-name').textContent = b.h;
+  Sound.play('bossAppear');
+  R.shake = 16;
+}
+function onBossDead(e) {
+  R.bossSpawned++;
+  R.kills++;
+  dropGem(e.x, e.y, e.xp, 0);
+  for (let i = 0; i < 6; i++) dropGem(e.x + rand(-40, 40), e.y + rand(-40, 40), 0, i < 2 ? 1 : 0);
+  dropGem(e.x, e.y - 10, 0, 2);
+  R.boss = null;
+  document.getElementById('boss-hp').classList.remove('on');
+  const st = R.st;
+  if (st.mainKind === 'endless') {
+    toast(st.boss.win);
+    R.nextBossAt = R.t + 300;
+  } else {
+    R.mainDone = true;
+    endRun(true);
+  }
+}
+function updateBossFlow(dt) {
+  const st = R.st;
+  if (R.boss && !R.boss.alive) R.boss = null;
+  if (R.boss) return;
+  if (st.mainKind === 'surviveBoss') {
+    if (R.t >= st.survive && R.bossSpawned === 0) {
+      R.boss = spawnBoss(0);
+      if (R.mods.twinBoss) spawnBoss(1);
+      announceBoss();
+    }
+  } else if (st.mainKind === 'altarBoss') {
+    if (R.altarsLeft <= 0 && R.bossSpawned === 0) {
+      R.boss = spawnBoss(0);
+      if (R.mods.twinBoss) spawnBoss(1);
+      announceBoss();
+    }
+  } else if (st.mainKind === 'endless') {
+    if (R.nextBossAt == null) R.nextBossAt = st.survive * 0.35;
+    if (R.t >= R.nextBossAt) {
+      R.boss = spawnBoss(0);
+      if (R.mods.twinBoss) spawnBoss(1);
+      announceBoss();
+      R.nextBossAt = null;
+    }
+    if (!R.mainDone && R.t >= st.survive) {
+      R.mainDone = true;
+      toast('주 미션 달성 — 이제부터는 순수한 기록이다.');
+      Sound.play('win');
+    }
+  }
+}
+
+/* ============================================================
+ *  21. 갱신(更新)
+ * ============================================================ */
+function updatePlayer(dt) {
+  const inp = inputVec();
+  const spd = R.agg.spd;
+  if (R.st.gimmick === 'ice') {
+    // 빙판 — 관성이 붙는다
+    R.vx += (inp.x * spd - R.vx) * Math.min(1, dt * 2.4);
+    R.vy += (inp.y * spd - R.vy) * Math.min(1, dt * 2.4);
+  } else {
+    R.vx = inp.x * spd; R.vy = inp.y * spd;
+  }
+  if (R.st.gimmick === 'void') {
+    // 중력 이상 — 사위가 그대를 끌어당긴다
+    const pull = 26;
+    const d = Math.hypot(R.px, R.py) || 1;
+    R.vx += -R.px / d * pull * dt * 6;
+    R.vy += -R.py / d * pull * dt * 6;
+  }
+  R.px += R.vx * dt; R.py += R.vy * dt;
+  if (inp.m > 0.15) R.face = Math.atan2(inp.y, inp.x);
+  // 카메라
+  cam.x += (R.px - cam.x) * Math.min(1, dt * 7);
+  cam.y += (R.py - cam.y) * Math.min(1, dt * 7);
+  if (R.invuln > 0) R.invuln -= dt;
+  if (R.shake > 0) R.shake = Math.max(0, R.shake - dt * 40);
+  // 접촉 피해
+  let worst = 0;
+  queryCircle(R.px, R.py, 14, e => { if (!e.altar && e.atk > worst) worst = e.atk; });
+  if (worst > 0) hurtPlayer(worst);
+}
+
+function updateEnemies(dt) {
+  const a = P_ENEMY.a;
+  for (let i = 0; i < a.length; i++) {
+    const e = a[i];
+    if (!e.alive) continue;
+    if (e.flash > 0) e.flash -= dt;
+    // 지속 피해
+    if (e.bleed > 0) { const d = Math.min(e.bleed, e.bleed * dt * 1.4); e.bleed -= d; e.hp -= d; }
+    if (e.poison > 0) { const d = Math.min(e.poison, e.poison * dt * 1.1); e.poison -= d; e.hp -= d; }
+    if (e.hp <= 0) { killEnemy(e); continue; }
+    if (e.slowT > 0) { e.slowT -= dt; if (e.slowT <= 0) e.slow = 0; }
+    // 넉백
+    if (e.knockX || e.knockY) {
+      e.x += e.knockX * dt; e.y += e.knockY * dt;
+      const damp = Math.pow(0.02, dt);
+      e.knockX *= damp; e.knockY *= damp;
+      if (Math.abs(e.knockX) < 2) e.knockX = 0;
+      if (Math.abs(e.knockY) < 2) e.knockY = 0;
+    }
+    if (e.altar) {
+      // 제단은 움직이지 않고 신도를 부른다
+      e.spawnT -= dt;
+      if (e.spawnT <= 0) { e.spawnT = 3.4; if (aliveEnemies() < TUNE.maxAlive) spawnAt(e.x, e.y); }
+      continue;
+    }
+    if (e.freeze > 0) { e.freeze -= dt; continue; }
+    // 추격
+    const dx = R.px - e.x, dy = R.py - e.y, d = Math.hypot(dx, dy) || 1;
+    let sp = e.spd * (1 - e.slow);
+    if (KINDS[e.kind].dash) {
+      e.dashT -= dt;
+      if (e.dashT <= 0) { e.dashT = rand(2.2, 4.0); e.dashUntil = 0.45; }
+      if (e.dashUntil > 0) { e.dashUntil -= dt; sp *= 3.1; }
+    }
+    e.x += dx / d * sp * dt; e.y += dy / d * sp * dt;
+    // 보스는 주기적으로 수하를 부르고, 오래 끌면 진노한다
+    if (e.boss) {
+      e.spawnT -= dt;
+      if (e.spawnT <= 0) { e.spawnT = 6.5; for (let j = 0; j < 4; j++) spawnAt(e.x, e.y); }
+      e.age += dt;
+      if (e.age > 40) {
+        const k = Math.min(1.3, (e.age - 40) / 55);
+        e.atk = e.atk0 * (1 + k);
+        // 끝내 붙지 않으면 고수가 그대를 따라잡는다 — 도망만으로는 관문을 넘을 수 없다
+        e.spd = e.spd0 * (1 + k * 0.6);
+        if (!e.raged) { e.raged = true; toast(R.st.boss.h + '이 진노한다.'); Sound.play('bossAppear'); }
+      }
+    }
+    // 너무 멀어진 잡졸은 회수 (풀 확보)
+    if (!e.boss && !e.elite && d > 1500) e.alive = false;
+  }
+}
+function spawnAt(x, y) {
+  const before = P_ENEMY.cur;
+  spawnOne();
+  // 방금 만든 적을 소환 위치로 옮긴다
+  const a = P_ENEMY.a;
+  for (let k = 0; k < a.length; k++) {
+    const i = (before + k) % a.length;
+    if (a[i].alive && a[i].spawnT === 0 && !a[i].boss && !a[i].altar) {
+      const ang = Math.random() * TAU, dd = rand(20, 60);
+      a[i].x = x + Math.cos(ang) * dd; a[i].y = y + Math.sin(ang) * dd;
+      a[i].spawnT = -1;
+      return;
+    }
+  }
+}
+
+function updateBullets(dt) {
+  const a = P_BULLET.a;
+  for (let i = 0; i < a.length; i++) {
+    const b = a[i];
+    if (!b.alive) continue;
+    b.life -= dt;
+    if (b.life <= 0) { b.alive = false; continue; }
+    if (b.homing) {
+      if (!b.target || !b.target.alive) b.target = nearestEnemy(b.x, b.y, 520);
+      if (b.target) {
+        const dx = b.target.x - b.x, dy = b.target.y - b.y, d = Math.hypot(dx, dy) || 1;
+        const sp = Math.hypot(b.vx, b.vy) || 1;
+        b.vx += (dx / d * sp - b.vx) * Math.min(1, dt * 6);
+        b.vy += (dy / d * sp - b.vy) * Math.min(1, dt * 6);
+      }
+    }
+    b.x += b.vx * dt; b.y += b.vy * dt;
+    b.ang += b.spin * dt;
+    queryCircle(b.x, b.y, b.r, e => {
+      if (!b.alive) return false;
+      hitEnemy(e, b.dmg, b.artId, b.status, b.knock, b.x - b.vx * 0.02, b.y - b.vy * 0.02);
+      if (b.pierce > 0) b.pierce--;
+      else { b.alive = false; addParts(b.x, b.y, 3, b.color, 90, 2.4); return false; }
+    });
+  }
+}
+
+function updateFields(dt) {
+  const a = P_FIELD.a;
+  for (let i = 0; i < a.length; i++) {
+    const f = a[i];
+    if (!f.alive) continue;
+    f.life -= dt;
+    if (f.life <= 0) { f.alive = false; continue; }
+    f.t -= dt;
+    if (f.t > 0) continue;
+    f.t = f.tick;
+    if (f.hostile) {
+      const dx = R.px - f.x, dy = R.py - f.y;
+      if (dx * dx + dy * dy <= f.r * f.r) hurtPlayer(f.dmg);
+    } else {
+      queryCircle(f.x, f.y, f.r, e => hitEnemy(e, f.dmg, f.artId, f.status, 0, f.x, f.y));
+    }
+  }
+}
+
+function updateGems(dt) {
+  const a = P_GEM.a, pr = R.agg.pickup * R.mods.pickup;
+  for (let i = 0; i < a.length; i++) {
+    const g = a[i];
+    if (!g.alive) continue;
+    const dx = R.px - g.x, dy = R.py - g.y, d = Math.hypot(dx, dy) || 1;
+    if (d < pr || g.pull) {
+      g.pull = 1;
+      const sp = 200 + (pr - d) * 2.4;
+      g.vx += (dx / d * sp - g.vx) * Math.min(1, dt * 9);
+      g.vy += (dy / d * sp - g.vy) * Math.min(1, dt * 9);
+    } else {
+      g.vx *= Math.pow(0.02, dt); g.vy *= Math.pow(0.02, dt);
+    }
+    g.x += g.vx * dt; g.y += g.vy * dt;
+    if (d < 20) {
+      g.alive = false;
+      if (g.kind === 0) {
+        const v = g.xp * (1 + R.t * TUNE.gemGrow) * R.agg.xp * R.mods.gemValue;
+        R.xp += v;
+        Sound.play('gem');
+        while (R.xp >= R.xpNext) { R.xp -= R.xpNext; R.level++; R.xpNext = xpNeed(R.level); R.pendingLevels++; }
+      } else if (g.kind === 1) {
+        healPlayer(R.hpMax * TUNE.healAmt);
+        addFloat(R.px, R.py - 26, '丹', '#7fd07f', 15);
+        Sound.play('insight');
+      } else {
+        R.pendingLevels++;
+        addFloat(R.px, R.py - 26, '秘笈', '#f0c060', 15);
+        Sound.play('insight');
+      }
+    }
+  }
+}
+
+function updateParts(dt) {
+  const a = P_PART.a;
+  for (let i = 0; i < a.length; i++) {
+    const p = a[i];
+    if (!p.alive) continue;
+    p.life -= dt;
+    if (p.life <= 0) { p.alive = false; continue; }
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    const damp = Math.pow(0.06, dt);
+    p.vx *= damp; p.vy *= damp;
+  }
+  const f = P_FX.a;
+  for (let i = 0; i < f.length; i++) { if (f[i].alive) { f[i].life -= dt; if (f[i].life <= 0) f[i].alive = false; } }
+  const t = P_FLOAT.a;
+  for (let i = 0; i < t.length; i++) {
+    const o = t[i];
+    if (!o.alive) continue;
+    o.life -= dt; o.y += o.vy * dt; o.vy *= Math.pow(0.25, dt);
+    if (o.life <= 0) o.alive = false;
+  }
+}
+
+function updateGimmick(dt) {
+  const st = R.st;
+  if (st.gimmick !== 'poison') return;
+  R.gimTick -= dt;
+  if (R.gimTick > 0) return;
+  R.gimTick = 2.6;
+  const f = P_FIELD.get(); if (!f) return;
+  const ang = Math.random() * TAU, d = rand(60, 300);
+  f.x = R.px + Math.cos(ang) * d; f.y = R.py + Math.sin(ang) * d;
+  f.r = rand(60, 100); f.life = f.max = 5.5;
+  f.dmg = R.st.atk * atkScale(R.t) * 0.34 * (R.lo.immunePoison ? 0 : 1);
+  f.tick = 0.6; f.t = 0.4; f.color = '#6aa04a'; f.status = null; f.artId = ''; f.hostile = true;
+}
+
+function updateSpawn(dt) {
+  const st = R.st, m = R.mods;
+  const rate = Math.min(TUNE.spawnCap, st.spawn * (1 + R.t / TUNE.spawnDiv) * m.spawn);
+  R.spawnAcc += rate * dt;
+  while (R.spawnAcc >= 1) { R.spawnAcc -= 1; spawnOne(); }
+}
+
+function stepRun(dt) {
+  R.t += dt;
+  rebuildGrid();
+  updatePlayer(dt);
+  if (R.over) return;
+  fireArts(dt);
+  updateBullets(dt);
+  updateEnemies(dt);
+  updateFields(dt);
+  updateGems(dt);
+  updateParts(dt);
+  updateGimmick(dt);
+  updateSpawn(dt);
+  updateBossFlow(dt);
+  if (R.pendingLevels > 0 && !R.over) openLevelUp();
+}
+
+/* ============================================================
+ *  22. 그리기(描) — 먹과 종이, 그리고 한자
+ * ============================================================ */
+let groundPat = null, groundFor = -1;
+function makeGround(st) {
+  const s = 128, c = makeCanvas(s, s), x = c.getContext('2d');
+  x.fillStyle = st.tint; x.fillRect(0, 0, s, s);
+  x.fillStyle = st.accent; x.globalAlpha = 0.20;
+  for (let i = 0; i < 30; i++) {
+    const px = Math.random() * s, py = Math.random() * s, r = Math.random() * 1.9 + 0.4;
+    x.beginPath(); x.arc(px, py, r, 0, TAU); x.fill();
+  }
+  x.globalAlpha = 0.12; x.strokeStyle = st.accent; x.lineWidth = 1;
+  for (let i = 0; i < 3; i++) {
+    const y0 = Math.random() * s;
+    x.beginPath(); x.moveTo(0, y0);
+    x.bezierCurveTo(s * 0.3, y0 + rand(-14, 14), s * 0.7, y0 + rand(-14, 14), s, y0 + rand(-8, 8));
+    x.stroke();
+  }
+  x.globalAlpha = 1;
+  return g2.createPattern(c, 'repeat');
+}
+
+function draw() {
+  if (!R) return;
+  const sh = R.shake, shx = sh ? rand(-sh, sh) : 0, shy = sh ? rand(-sh, sh) : 0;
+  g2.setTransform(DPR, 0, 0, DPR, shx * DPR, shy * DPR);
+
+  // ── 지면
+  if (groundFor !== R.si || !groundPat) { groundPat = makeGround(R.st); groundFor = R.si; }
+  g2.fillStyle = groundPat;
+  g2.save();
+  g2.translate(-(((cam.x % 128) + 128) % 128), -(((cam.y % 128) + 128) % 128));
+  g2.fillRect(0, 0, VW + 130, VH + 130);
+  g2.restore();
+
+  const mx = 70, L = -mx, Rr = VW + mx, T = -mx, B = VH + mx;
+  const vis = (X, Y, pad) => X > L - pad && X < Rr + pad && Y > T - pad && Y < B + pad;
+
+  // ── 장판
+  const fa = P_FIELD.a;
+  for (let i = 0; i < fa.length; i++) {
+    const f = fa[i]; if (!f.alive) continue;
+    const X = sx(f.x), Y = sy(f.y);
+    if (!vis(X, Y, f.r)) continue;
+    const k = f.life / f.max;
+    g2.globalAlpha = 0.13 + 0.16 * k;
+    g2.fillStyle = f.color;
+    g2.beginPath(); g2.arc(X, Y, f.r, 0, TAU); g2.fill();
+    g2.globalAlpha = 0.32 + 0.3 * k;
+    g2.strokeStyle = f.color; g2.lineWidth = f.hostile ? 2.2 : 1.4;
+    g2.beginPath(); g2.arc(X, Y, f.r, 0, TAU); g2.stroke();
+    g2.globalAlpha = 1;
+  }
+
+  // ── 기(氣) 구슬
+  const ga = P_GEM.a;
+  for (let i = 0; i < ga.length; i++) {
+    const gm = ga[i]; if (!gm.alive) continue;
+    const X = sx(gm.x), Y = sy(gm.y);
+    if (!vis(X, Y, 10)) continue;
+    if (gm.kind === 0) { g2.fillStyle = '#7ac0e0'; g2.shadowColor = '#7ac0e0'; g2.shadowBlur = 6; }
+    else if (gm.kind === 1) { g2.fillStyle = '#7fd07f'; g2.shadowColor = '#7fd07f'; g2.shadowBlur = 9; }
+    else { g2.fillStyle = '#f0c060'; g2.shadowColor = '#f0c060'; g2.shadowBlur = 12; }
+    const r = gm.kind === 0 ? 3.6 : 6;
+    g2.beginPath(); g2.arc(X, Y, r, 0, TAU); g2.fill();
+    g2.shadowBlur = 0;
+  }
+
+  // ── 적
+  const ea = P_ENEMY.a;
+  for (let i = 0; i < ea.length; i++) {
+    const e = ea[i]; if (!e.alive) continue;
+    const X = sx(e.x), Y = sy(e.y);
+    if (!vis(X, Y, e.r + 20)) continue;
+    const spr = e.boss ? bossSprite(e.glyph, e.color) : e.altar ? bossSprite('壇', e.color) : enemySprite(e.kind, e.color, e.elite);
+    const scale = e.boss || e.altar ? 1 : 1;
+    if (e.freeze > 0) { g2.globalAlpha = 0.85; }
+    g2.drawImage(spr.c, X - spr.r * scale, Y - spr.r * scale, spr.c.width * scale, spr.c.height * scale);
+    g2.globalAlpha = 1;
+    if (e.freeze > 0) {
+      g2.strokeStyle = '#a8e4ff'; g2.lineWidth = 2; g2.globalAlpha = 0.8;
+      g2.beginPath(); g2.arc(X, Y, e.r + 3, 0, TAU); g2.stroke(); g2.globalAlpha = 1;
+    }
+    if (e.flash > 0) {
+      g2.globalAlpha = Math.min(0.65, e.flash * 6); g2.fillStyle = '#fff';
+      g2.beginPath(); g2.arc(X, Y, e.r, 0, TAU); g2.fill(); g2.globalAlpha = 1;
+    }
+    if (e.bleed > 0) {
+      g2.fillStyle = '#c02038'; g2.globalAlpha = 0.7;
+      g2.beginPath(); g2.arc(X + e.r * 0.7, Y - e.r * 0.7, 2.4, 0, TAU); g2.fill(); g2.globalAlpha = 1;
+    }
+    // 큰 적은 체력 표시
+    if ((e.boss || e.elite || e.altar) && e.hp < e.hpMax) {
+      const w = e.r * 2, hpk = clamp(e.hp / e.hpMax, 0, 1);
+      g2.fillStyle = 'rgba(0,0,0,0.55)'; g2.fillRect(X - w / 2, Y - e.r - 9, w, 3.5);
+      g2.fillStyle = e.boss ? '#d4567a' : '#e0a850';
+      g2.fillRect(X - w / 2, Y - e.r - 9, w * hpk, 3.5);
+    }
+  }
+
+  // ── 회전하는 호신 기(氣)
+  for (const slot of R.cho) {
+    const a = ARTS[slot.id];
+    if (!a || a.pattern !== 'orbit') continue;
+    const s = artStat(slot.id, slot.lv);
+    const base = (s.radius || 70) * R.agg.area, n = Math.max(1, s.count || 2);
+    const orbR = 15 * Math.sqrt(R.agg.area);
+    for (let i = 0; i < n; i++) {
+      const inner = s.dual && (i % 2 === 1);
+      const rr = inner ? base * 0.58 : base;
+      const ang = slot.ang * (inner ? -1 : 1) + (i / n) * TAU;
+      const X = sx(R.px + Math.cos(ang) * rr), Y = sy(R.py + Math.sin(ang) * rr);
+      g2.fillStyle = a.color; g2.shadowColor = a.color; g2.shadowBlur = 10;
+      g2.globalAlpha = 0.85;
+      g2.beginPath(); g2.arc(X, Y, orbR * 0.62, 0, TAU); g2.fill();
+      g2.globalAlpha = 1; g2.shadowBlur = 0;
+    }
+  }
+
+  // ── 투사체
+  const ba = P_BULLET.a;
+  for (let i = 0; i < ba.length; i++) {
+    const b = ba[i]; if (!b.alive) continue;
+    const X = sx(b.x), Y = sy(b.y);
+    if (!vis(X, Y, 14)) continue;
+    const spr = bulletSprite(b.color, Math.round(b.r), b.shape);
+    if (b.shape === 'dot') g2.drawImage(spr.c, X - spr.r, Y - spr.r);
+    else {
+      g2.save(); g2.translate(X, Y); g2.rotate(b.shape === 'petal' ? b.ang : Math.atan2(b.vy, b.vx) + Math.PI / 2);
+      g2.drawImage(spr.c, -spr.r, -spr.r); g2.restore();
+    }
+  }
+
+  // ── 이펙트
+  const xa = P_FX.a;
+  for (let i = 0; i < xa.length; i++) {
+    const f = xa[i]; if (!f.alive) continue;
+    const k = f.life / f.max, X = sx(f.x), Y = sy(f.y);
+    g2.globalAlpha = k * 0.85;
+    g2.strokeStyle = f.color;
+    if (f.kind === 'slash') {
+      g2.lineWidth = 5 + 5 * (1 - k);
+      g2.beginPath(); g2.arc(X, Y, f.r * (0.72 + 0.3 * (1 - k)), f.ang - f.arc / 2, f.ang + f.arc / 2); g2.stroke();
+    } else if (f.kind === 'ring') {
+      g2.lineWidth = 3;
+      g2.beginPath(); g2.arc(X, Y, f.r * (0.3 + 2.2 * (1 - k)), 0, TAU); g2.stroke();
+    } else if (f.kind === 'aura') {
+      g2.lineWidth = 2.5;
+      g2.beginPath(); g2.arc(X, Y, f.r, 0, TAU); g2.stroke();
+      g2.globalAlpha = k * 0.10; g2.fillStyle = f.color;
+      g2.beginPath(); g2.arc(X, Y, f.r, 0, TAU); g2.fill();
+    } else if (f.kind === 'beam') {
+      const w = f.r * (0.35 + 0.9 * k);
+      g2.save(); g2.translate(X, Y); g2.rotate(f.ang);
+      const grd = g2.createLinearGradient(0, 0, f.len, 0);
+      grd.addColorStop(0, f.color); grd.addColorStop(1, 'rgba(255,255,255,0)');
+      g2.fillStyle = grd; g2.globalAlpha = k * 0.8;
+      g2.fillRect(0, -w / 2, f.len, w);
+      g2.restore();
+    }
+    g2.globalAlpha = 1;
+  }
+
+  // ── 파편
+  const pa = P_PART.a;
+  for (let i = 0; i < pa.length; i++) {
+    const p = pa[i]; if (!p.alive) continue;
+    const X = sx(p.x), Y = sy(p.y);
+    if (!vis(X, Y, 6)) continue;
+    g2.globalAlpha = clamp(p.life / p.max, 0, 1);
+    g2.fillStyle = p.color;
+    g2.beginPath(); g2.arc(X, Y, p.r, 0, TAU); g2.fill();
+  }
+  g2.globalAlpha = 1;
+
+  // ── 그대
+  const PX = sx(R.px), PY = sy(R.py);
+  const flick = R.invuln > 0 && ((R.invuln * 14) | 0) % 2 === 0;
+  g2.globalAlpha = flick ? 0.45 : 1;
+  const sc = SECTS[M.sect];
+  g2.fillStyle = 'rgba(0,0,0,0.35)';
+  g2.beginPath(); g2.ellipse(PX, PY + 13, 12, 4.5, 0, 0, TAU); g2.fill();
+  const pg = g2.createRadialGradient(PX, PY - 5, 2, PX, PY, 15);
+  pg.addColorStop(0, '#f0e4ca'); pg.addColorStop(1, '#c8b490');
+  g2.fillStyle = pg;
+  g2.beginPath(); g2.arc(PX, PY, 14, 0, TAU); g2.fill();
+  g2.strokeStyle = sc.color; g2.lineWidth = 2.4;
+  g2.beginPath(); g2.arc(PX, PY, 14, 0, TAU); g2.stroke();
+  g2.font = "600 15px 'Ma Shan Zheng', serif";
+  g2.textAlign = 'center'; g2.textBaseline = 'middle';
+  g2.fillStyle = '#2a2018';
+  g2.fillText(sc.g, PX, PY + 1);
+  // 향하는 방향
+  g2.strokeStyle = sc.color; g2.lineWidth = 2.6; g2.globalAlpha = (flick ? 0.4 : 0.85);
+  g2.beginPath();
+  g2.moveTo(PX + Math.cos(R.face) * 15, PY + Math.sin(R.face) * 15);
+  g2.lineTo(PX + Math.cos(R.face) * 23, PY + Math.sin(R.face) * 23);
+  g2.stroke();
+  g2.globalAlpha = 1;
+  // 命 바
+  const hw = 40, hk = clamp(R.hp / R.hpMax, 0, 1);
+  g2.fillStyle = 'rgba(0,0,0,0.6)'; g2.fillRect(PX - hw / 2, PY - 26, hw, 4.5);
+  g2.fillStyle = hk > 0.35 ? '#c04050' : '#e06060';
+  g2.fillRect(PX - hw / 2, PY - 26, hw * hk, 4.5);
+
+  // ── 뜨는 글자
+  const ta = P_FLOAT.a;
+  g2.textAlign = 'center'; g2.textBaseline = 'middle';
+  for (let i = 0; i < ta.length; i++) {
+    const o = ta[i]; if (!o.alive) continue;
+    const X = sx(o.x), Y = sy(o.y);
+    g2.globalAlpha = clamp(o.life / o.max, 0, 1);
+    g2.font = "600 " + o.size + "px 'Noto Serif KR', serif";
+    g2.fillStyle = 'rgba(0,0,0,0.6)';
+    g2.fillText(o.txt, X + 1, Y + 1);
+    g2.fillStyle = o.color;
+    g2.fillText(o.txt, X, Y);
+  }
+  g2.globalAlpha = 1;
+
+  // ── 비네팅 + 피해 적신호
+  const vg = g2.createRadialGradient(VW / 2, VH / 2, Math.min(VW, VH) * 0.42, VW / 2, VH / 2, Math.max(VW, VH) * 0.78);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+  g2.fillStyle = vg; g2.fillRect(0, 0, VW, VH);
+  const lowHp = R.hp / R.hpMax;
+  if (lowHp < 0.3) {
+    g2.globalAlpha = (0.3 - lowHp) * 1.1 * (0.6 + 0.4 * Math.sin(R.t * 6));
+    g2.fillStyle = '#8a1828'; g2.fillRect(0, 0, VW, VH);
+    g2.globalAlpha = 1;
+  }
+}
+
+/* ============================================================
+ *  23. 런 UI
+ * ============================================================ */
+const $ = id => document.getElementById(id);
+let hudAcc = 0;
+function updateHud(dt) {
+  hudAcc += dt;
+  if (hudAcc < 0.12) return;
+  hudAcc = 0;
+  $('xp-fill').style.width = clamp(R.xp / R.xpNext, 0, 1) * 100 + '%';
+  $('hud-lv').textContent = realmName(M.realm).n + ' · Lv.' + R.level;
+  $('hud-kill').textContent = '斬 ' + fmt(R.kills);
+  const st = R.st;
+  $('hud-time').textContent = mmss(R.t);
+  let mi;
+  if (st.mainKind === 'altarBoss') mi = R.altarsLeft > 0 ? '제단 ' + R.altarsLeft + '개 남음' : (R.boss ? R.st.boss.h + '과 대치' : '');
+  else if (R.t < st.survive) mi = mmss(st.survive - R.t) + ' 뒤 관문의 고수';
+  else mi = R.boss ? st.boss.h + '과 대치' : (st.mainKind === 'endless' ? '끝은 없다' : '');
+  $('hud-mission').textContent = mi;
+  if (R.boss) {
+    $('boss-hp').querySelector('.bh-fill').style.width = clamp(R.boss.hp / R.boss.hpMax, 0, 1) * 100 + '%';
+  }
+}
+function renderSlots() {
+  const box = $('hud-arts');
+  box.innerHTML = '';
+  for (const s of R.cho) {
+    const a = ARTS[s.id];
+    const d = document.createElement('div');
+    d.className = 'slot-chip' + (a.evolved ? ' evo' : '');
+    d.textContent = a.h + (a.curse ? '' : a.evolved ? ' 絕世' : ' ' + s.lv);
+    box.appendChild(d);
+  }
+  for (const s of R.sim) {
+    const a = ARTS[s.id];
+    const d = document.createElement('div');
+    d.className = 'slot-chip sim';
+    d.textContent = a.h + ' ' + s.lv;
+    box.appendChild(d);
+  }
+}
+
+// ── 레벨업 3택
+let lvOpen = false;
+function levelChoices() {
+  const n = R.mods.choices;
+  const pool = [];
+  for (const [id, e] of Object.entries(EVOLUTIONS)) {
+    if (R.cho.find(s => s.id === id)) continue;
+    const base = R.cho.find(s => s.id === e.from);
+    const sim = R.sim.find(s => s.id === e.needSim);
+    if (base && base.lv >= ART_MAX && sim) pool.push({ t: 'evo', id, w: 200 });
+  }
+  for (const s of R.cho) {
+    const a = ARTS[s.id];
+    if (a.curse || a.evolved || s.lv >= ART_MAX) continue;
+    pool.push({ t: 'up', id: s.id, w: 26 });
+  }
+  for (const s of R.sim) if (s.lv < SIM_MAX) pool.push({ t: 'sup', id: s.id, w: 20 });
+  // 빈 자리가 많을수록 새 무공을 강하게 밀어준다 — 6칸이 놀고 있으면 게임이 얇아진다
+  const choRoom = 6 - R.cho.length, simRoom = 6 - R.sim.length;
+  if (choRoom > 0) for (const id of availableArts('cho')) {
+    if (R.cho.find(s => s.id === id)) continue;
+    pool.push({ t: 'new', id, w: (GRADES[ARTS[id].grade].tier >= 4 ? 22 : 34) * (1 + choRoom * 0.5) });
+  }
+  if (simRoom > 0) for (const id of availableArts('sim')) {
+    if (R.sim.find(s => s.id === id)) continue;
+    pool.push({ t: 'snew', id, w: 26 * (1 + simRoom * 0.4) });
+  }
+  for (const st of STATS) pool.push({ t: 'stat', id: st.id, w: 8 });
+  pool.push({ t: 'heal', w: 6 });
+
+  const out = [];
+  const p = pool.slice();
+  while (out.length < n && p.length) {
+    let tot = 0; for (const c of p) tot += c.w;
+    let x = Math.random() * tot, idx = 0;
+    for (let i = 0; i < p.length; i++) { x -= p[i].w; if (x <= 0) { idx = i; break; } }
+    out.push(p.splice(idx, 1)[0]);
+  }
+  return out;
+}
+const RUN_STAT_TXT = {
+  geunggol: '무공 피해 +10%', chebaek: '최대 命 +10%', naegong: '초식 쿨다운 -6%',
+  sinbeop: '이동 속도 +8%', oseong: '기 흡수 +18% · 경험 +8%',
+};
+function cardHTML(c) {
+  if (c.t === 'heal') {
+    return { g: '丹', n: '영약을 삼킨다', t: '回復', tc: '#3a7a3a', d: '품에서 꺼낸 단약을 삼킨다.', e: '命 40% 회복', cls: '' };
+  }
+  if (c.t === 'stat') {
+    const st = STATS.find(s => s.id === c.id);
+    return { g: st.g, n: st.n + ' ' + st.h + '을 다진다', t: '能力', tc: '#6a5a3a', d: st.d, e: RUN_STAT_TXT[c.id] + ' (이 판 내내, 겹칠 수 있다)', cls: '' };
+  }
+  const a = ARTS[c.id], gr = GRADES[a.grade];
+  if (c.t === 'evo') {
+    const e = EVOLUTIONS[c.id];
+    return { g: a.g, n: a.h, t: '進化', tc: '#a81828',
+      d: ARTS[e.from].h + '이 대성(大成)에 이르고 ' + ARTS[e.needSim].h + '과 맞물렸다. ' + a.d,
+      e: PATTERN_NAME[a.pattern] + ' · 절세무공으로 진화한다', cls: 'evo', lv: '進化' };
+  }
+  if (c.t === 'new' || c.t === 'snew') {
+    return { g: a.g, n: a.h, t: gr.n, tc: gr.color, d: a.d,
+      e: a.type === 'sim' ? simText(a, 1) : PATTERN_NAME[a.pattern] + ' · 피해 ' + Math.round(a.dmg * R.agg.dmg),
+      cls: 'new', lv: '새 ' + (a.type === 'sim' ? '심법' : '초식') };
+  }
+  const cur = (a.type === 'sim' ? R.sim : R.cho).find(s => s.id === c.id);
+  return { g: a.g, n: a.h, t: gr.n, tc: gr.color, d: a.d,
+    e: a.type === 'sim' ? simText(a, cur.lv + 1) : artGrowText(c.id),
+    cls: '', lv: cur.lv + ' → ' + (cur.lv + 1) };
+}
+function simText(a, lv) {
+  const nm = { dmg: '피해', hp: '최대 命', cd: '쿨다운 감소', spd: '이동', pickup: '흡수 반경', xp: '경험',
+               dr: '피해감소', dodge: '회피', lifesteal: '흡정', area: '범위', freezeDur: '빙결 지속' };
+  const out = [];
+  for (const [k, v] of Object.entries(a.m || {})) {
+    if (k === 'dr' || k === 'dodge' || k === 'lifesteal') out.push(nm[k] + ' +' + pct(v * lv));
+    else if (k === 'freezeDur') out.push(nm[k] + ' +' + (v * lv).toFixed(2) + '초');
+    else out.push(nm[k] + (v < 0 ? ' ' : ' +') + pct(v * lv));
+  }
+  return out.join(' · ') + ' (' + lv + '단)';
+}
+function openLevelUp() {
+  if (lvOpen) return;
+  lvOpen = true;
+  Sound.play('levelup');
+  const cs = levelChoices();
+  $('lv-title').textContent = '깨달음 — Lv.' + R.level;
+  $('lv-sub').textContent = R.pendingLevels > 1 ? '깨달음이 ' + R.pendingLevels + '겹으로 밀려 있다' : '한 갈래를 고른다';
+  const box = $('lv-cards');
+  box.innerHTML = '';
+  for (const c of cs) {
+    const h = cardHTML(c);
+    const d = document.createElement('div');
+    d.className = 'lvc ' + h.cls;
+    d.innerHTML = `<div class="lc-top">
+        <span class="lc-g">${h.g}</span>
+        <span class="lc-n">${h.n}</span>
+        <span class="lc-t" style="background:${h.tc}">${h.t}</span>
+        <span class="lc-lv">${h.lv || ''}</span>
+      </div>
+      <div class="lc-d">${h.d}</div>
+      <div class="lc-e">${h.e}</div>`;
+    d.onclick = () => takeChoice(c);
+    box.appendChild(d);
+  }
+  showScreen('levelup');
+}
+function takeChoice(c) {
+  if (c.t === 'evo') evolveArt(c.id);
+  else if (c.t === 'up' || c.t === 'new' || c.t === 'sup' || c.t === 'snew') addArt(c.id);
+  else if (c.t === 'stat') { R.rs[c.id]++; recalc(); }
+  else if (c.t === 'heal') healPlayer(R.hpMax * 0.4);
+  closeLevelUp();
+}
+function closeLevelUp() {
+  R.pendingLevels = Math.max(0, R.pendingLevels - 1);
+  lvOpen = false;
+  showScreen(null);
+  renderSlots();
+  if (R.pendingLevels > 0 && !R.over) openLevelUp();
+}
+
+// ── 일시정지
+function togglePause() {
+  if (!running || R.over || lvOpen) return;
+  R.paused = !R.paused;
+  if (R.paused) {
+    const box = $('pz-arts');
+    box.innerHTML = '';
+    const total = Object.values(R.dmgBy).reduce((a, b) => a + b, 0) || 1;
+    const rows = [];
+    for (const s of R.cho) rows.push([ARTS[s.id], s.lv, R.dmgBy[s.id] || 0, '초식']);
+    for (const s of R.sim) rows.push([ARTS[s.id], s.lv, -1, '심법']);
+    for (const [a, lv, dmg, kind] of rows) {
+      const share = dmg >= 0 ? pct(dmg / total) : '—';
+      const d = document.createElement('div');
+      d.className = 'kv';
+      d.innerHTML = `<span>${a.h} <span style="color:var(--ink-soft);font-weight:400">${kind} ${a.evolved ? '絕世' : lv}단</span></span><span>${share}</span>`;
+      box.appendChild(d);
+    }
+    const rs = STATS.filter(s => R.rs[s.id] > 0).map(s => s.h + '×' + R.rs[s.id]).join(' · ');
+    $('pz-info').innerHTML =
+      `<div class="kv"><span>권역</span><span>${R.st.h}</span></div>` +
+      `<div class="kv"><span>승천</span><span>${R.asc}</span></div>` +
+      `<div class="kv"><span>버틴 시간</span><span>${mmss(R.t)}</span></div>` +
+      `<div class="kv"><span>참살</span><span>${fmt(R.kills)}</span></div>` +
+      `<div class="kv"><span>피격</span><span>${R.hitCount}회</span></div>` +
+      `<div class="kv"><span>命</span><span>${Math.ceil(R.hp)} / ${R.hpMax}</span></div>` +
+      (rs ? `<div class="kv"><span>다진 능력치</span><span>${rs}</span></div>` : '');
+    showScreen('s-pause');
+  } else showScreen(null);
+}
+
+// ── 종료 · 정산
+function endRun(won) {
+  if (R.over) return;
+  R.over = true; R.won = won; running = false; R.paused = false;
+  Sound.play(won ? 'win' : 'lose');
+  $('hud').classList.remove('on');
+  $('hud-arts').classList.remove('on');
+  $('pause-btn').classList.remove('on');
+  $('boss-hp').classList.remove('on');
+  settle();
+}
+function settle() {
+  const st = R.st, i = R.si, asc = R.asc;
+  const subs = stageSubs(i);
+  const res = { qi: 0, fame: 0, seeds: 0, done: [], undone: [], firstClear: false, ascUp: false };
+  res.qi = Math.floor((R.kills * 0.9 + R.t * 0.65) * st.reward.qi * (1 + asc * 0.12) * seedEff('gi') * M.qiGain);
+  res.fame = Math.floor((R.kills * 0.22 + R.t * 0.18 + (R.won ? 260 : 0)) * st.reward.fame * (1 + asc * 0.18) * seedEff('myeon'));
+  M.qi += res.qi; M.fame += res.fame; M.totalFame += res.fame;
+  if (!M.stageSubs[st.id]) M.stageSubs[st.id] = {};
+  for (const s of subs) {
+    if (s.chk(R)) {
+      res.done.push(s);
+      if (!M.stageSubs[st.id][s.id]) { M.stageSubs[st.id][s.id] = true; res.seeds += 1; }
+    } else res.undone.push(s);
+  }
+  if (R.won) {
+    M.wins++;
+    const prev = M.stageClear[st.id];
+    if (prev == null) { res.firstClear = true; res.seeds += 2; M.stageClear[st.id] = asc; res.ascUp = true; }
+    else if (asc > prev) { M.stageClear[st.id] = asc; res.ascUp = true; res.seeds += 1; }
+    M.maxAscEver = Math.max(M.maxAscEver, asc);
+  }
+  if (!M.bestTime[st.id] || R.t > M.bestTime[st.id]) M.bestTime[st.id] = R.t;
+  M.bestKills = Math.max(M.bestKills, R.kills);
+  M.seedPoints += res.seeds;
+  saveMeta();
+
+  $('rs-glyph').textContent = R.won ? '克' : '殞';
+  $('rs-glyph').style.color = R.won ? 'var(--gold-dark)' : 'var(--plum-dark)';
+  $('rs-title').textContent = R.won ? '克 · 관문을 넘었다' : '殞 · 강호에 스러졌다';
+  $('rs-story').innerHTML = R.won
+    ? st.boss.win + (res.firstClear ? '<br><br><span class="em">권역을 처음으로 평정했다.</span>' : '')
+    : (R.mainDone
+        ? '주 미션은 이루었으나, 끝내 하늘 밖에서 스러졌다. 기록은 남는다.'
+        : '그대의 무(武)가 강호에 스러진다. 천하 서열은 비정하다. 그러나 무명(無名)의 이야기는 또 다른 운명으로 다시 시작되리라.');
+  const ml = $('rs-missions');
+  ml.innerHTML = `<div class="mi ${R.won ? 'done' : ''}"><span class="mk"></span><span>${mainLabel(i)}</span></div>` +
+    subs.map(s => `<div class="mi ${res.done.indexOf(s) >= 0 ? 'done' : ''}"><span class="mk"></span><span>${s.label}</span></div>`).join('');
+  $('rs-gain').innerHTML =
+    `<div class="kv"><span>버틴 시간</span><span>${mmss(R.t)}</span></div>` +
+    `<div class="kv"><span>참살</span><span>${fmt(R.kills)}체</span></div>` +
+    `<div class="kv"><span>도달 레벨</span><span>Lv.${R.level}</span></div>` +
+    `<div class="kv"><span>피격</span><span>${R.hitCount}회</span></div>` +
+    `<div class="kv" style="border-top:1px dashed rgba(120,90,50,0.3);margin-top:4px;padding-top:6px"><span class="res-qi">眞氣</span><span>+${fmt(res.qi)}</span></div>` +
+    `<div class="kv"><span class="res-fame">名聲</span><span>+${fmt(res.fame)}</span></div>` +
+    (res.seeds ? `<div class="kv"><span class="res-seed">도(道)의 씨앗</span><span>+${res.seeds}</span></div>` : '') +
+    (res.ascUp ? `<div class="kv"><span>승천 기록</span><span>${asc} 갱신</span></div>` : '');
+  showScreen('s-result');
+}
+
+/* ============================================================
+ *  24. 화면 전환 · 모달 · 토스트
+ * ============================================================ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => { if (s.id !== 'modal') s.classList.remove('on'); });
+  if (id) {
+    const el = $(id);
+    el.classList.add('on');
+    el.scrollTop = 0;
+  }
+}
+function openModal(glyph, title, body, opts) {
+  $('md-glyph').textContent = glyph;
+  $('md-title').textContent = title;
+  $('md-body').innerHTML = body;
+  const box = $('md-opts');
+  box.innerHTML = '';
+  for (const o of opts) {
+    const b = document.createElement('button');
+    b.className = 'btn ' + (o.cls || '');
+    b.innerHTML = o.sub ? `${o.label}<br><span style="font-size:10px;opacity:.75">${o.sub}</span>` : o.label;
+    b.onclick = o.cb;
+    box.appendChild(b);
+  }
+  $('modal').classList.add('on');
+}
+function closeModal() { $('modal').classList.remove('on'); }
+function toast(msg, cls) {
+  const w = $('toasts');
+  const d = document.createElement('div');
+  d.className = 'toast ' + (cls || '');
+  d.textContent = msg;
+  w.appendChild(d);
+  setTimeout(() => d.remove(), 2600);
+  while (w.children.length > 4) w.firstChild.remove();
+}
+
+/* ============================================================
+ *  25. 명패(名牌) — 출신·재능·문파
+ * ============================================================ */
+let roll = null, selSect = null;
+function doRoll() {
+  const saved = storeGet();
+  const luck = saved && saved.seeds && saved.seeds.cheon ? SEEDS.cheon.eff(saved.seeds.cheon) : 0;
+  roll = { origin: pick(Object.keys(ORIGINS)), talent: rollTalent(luck) };
+  const o = ORIGINS[roll.origin], t = TALENTS[roll.talent], tier = TALENT_TIERS[t.t];
+  $('rl-origin-n').textContent = o.h;
+  $('rl-origin-d').textContent = o.d;
+  $('rl-origin-b').textContent = o.b;
+  $('rl-talent-n').innerHTML = `<span class="hanja" style="color:${tier.color}">${tier.n}</span> ${t.h}`;
+  $('rl-talent-d').textContent = t.d;
+  $('rl-talent-b').textContent = talentText(t) || '보정 없음';
+}
+function talentText(t) {
+  const nm = { dmg: '피해', hp: '최대 命', spd: '이동', cd: '쿨다운', pickup: '흡수 반경', xp: '경험',
+               dr: '피해감소', dodge: '회피', area: '범위', revive: '부활', immunePoison: '독 면역', bleed: '출혈' };
+  const out = [];
+  for (const [k, v] of Object.entries(t.m || {})) {
+    if (k === 'revive') out.push('죽어도 한 번 부활');
+    else if (k === 'immunePoison') out.push('독 면역');
+    else if (k === 'dr' || k === 'dodge' || k === 'bleed') out.push(nm[k] + ' +' + pct(v));
+    else if (k === 'cd') out.push('쿨다운 ' + pct(1 - v) + ' 감소');
+    else out.push(nm[k] + ' ×' + v.toFixed(2));
+  }
+  return out.join(' · ');
+}
+function buildSectGrid() {
+  const grid = $('sect-grid');
+  grid.innerHTML = '';
+  for (const [id, s] of Object.entries(SECTS)) {
+    const d = document.createElement('div');
+    d.className = 'sect-cell';
+    d.style.borderColor = s.color;
+    d.innerHTML = `<div class="sc-h" style="color:${s.color}">${s.n}</div>
+      <div class="sc-n">${s.h}</div>
+      <div class="sc-c">${ARTS[s.startCho].h}</div>`;
+    d.onclick = () => {
+      selSect = id;
+      grid.querySelectorAll('.sect-cell').forEach(c => c.classList.remove('on'));
+      d.classList.add('on');
+      const bonus = Object.entries(s.bonus).map(([k, v]) => STATS.find(x => x.id === k).h + ' +' + v).join(' · ');
+      $('sect-note').innerHTML = `<b>${s.creed}</b><br>입문 초식: ${ARTS[s.startCho].h} (${PATTERN_NAME[ARTS[s.startCho].pattern]})<br>바탕 능력치: ${bonus}<br><span style="color:var(--ink-2)">${s.intro}</span>`;
+      Sound.unlock();
+    };
+    grid.appendChild(d);
+  }
+}
+
+/* ============================================================
+ *  26. 허브(虛部) — 권역 · 능력치 · 경지 · 도
+ * ============================================================ */
+let hubTab = 'stage', selAsc = 0;
+function showRumor() {
+  const jons = NINE_THRONES.slice(0, 9);
+  const a = pick(jons), b = pick(jons.filter(x => x !== a));
+  const ctx = {
+    rival: pick(RIVALS), faction: pick(Object.values(FACTIONS)).h,
+    region: pick(STAGES).h, me: M.name, realm: realmName(M.realm).h,
+    jonA: a.h, jonB: b.h,
+  };
+  let tot = 0; for (const r of RUMORS) tot += r.w;
+  let x = Math.random() * tot, r = RUMORS[0];
+  for (const c of RUMORS) { x -= c.w; if (x <= 0) { r = c; break; } }
+  const el = $('rumor-line');
+  el.className = r.k;
+  el.innerHTML = r.f(ctx);
+}
+function renderHub() {
+  const rn = realmName(M.realm);
+  $('hb-name').textContent = M.name;
+  const t = TALENTS[M.talent], tier = TALENT_TIERS[t.t];
+  $('hb-sub').innerHTML = `${SECTS[M.sect].h} · <span style="color:${tier.color}">${tier.n} ${t.h}</span> · ${ORIGINS[M.origin].h}` +
+    (M.rebirths ? ` · 회귀 ${M.rebirths}` : '');
+  $('hb-realm').textContent = rn.n;
+  $('hb-qi').textContent = fmt(M.qi);
+  $('hb-fame').textContent = fmt(M.fame);
+  $('hb-seed').textContent = fmt(M.seedPoints);
+
+  // ── 권역
+  const sl = $('stage-list');
+  sl.innerHTML = '';
+  STAGES.forEach((s, i) => {
+    const un = stageUnlocked(i), cl = M.stageClear[s.id], lim = ascLimit(i);
+    const f = FACTIONS[s.faction];
+    const d = document.createElement('div');
+    d.className = 'stage-cell' + (un ? (cl != null ? ' clear' : '') : ' locked');
+    const subDone = M.stageSubs[s.id] ? Object.keys(M.stageSubs[s.id]).length : 0;
+    d.innerHTML = `<div class="st-top">
+        <span class="st-g hanja" style="color:${f.color}">${s.g}</span>
+        <span class="st-n">${s.h}</span>
+        <span class="st-f" style="color:${f.color}">${f.g}</span>
+        <span class="st-a">${un ? (cl != null ? '昇天 ' + cl + ' 격파' : '미평정') : '잠김'}</span>
+      </div>
+      <div class="st-d">${un ? s.d : (s.needRealm != null ? '경지 ' + realmName(s.needRealm).h + '에 이르러야 길이 보인다.' : '앞 권역을 평정해야 길이 열린다.')}</div>` +
+      (un ? `<div class="st-m">${mainLabel(i)} · 부미션 ${subDone}/3 · 승천 ${lim}까지 허용</div>` : '');
+    if (un) d.onclick = () => enterBrief(i);
+    sl.appendChild(d);
+  });
+  const range = $('asc-range');
+  range.value = selAsc;
+  $('asc-num').textContent = hanjaNum(selAsc);
+  $('asc-desc').textContent = ASCENSIONS[selAsc];
+
+  // ── 능력치
+  const stl = $('stat-list');
+  stl.innerHTML = '';
+  const cap = statCap(M.realm);
+  for (const st of STATS) {
+    const lv = M.stats[st.id], v = sv(st.id);
+    const atCap = lv >= cap;
+    const c1 = statCost(lv), c10 = statCostN(lv, Math.min(10, cap - lv));
+    const row = document.createElement('div');
+    row.className = 'stat-row';
+    row.innerHTML = `<div class="stat-g hanja">${st.g}</div>
+      <div class="stat-m">
+        <div class="stat-n">${st.n} <span style="font-weight:400;color:var(--ink-soft)">${st.h}</span>
+          <span style="float:right">${v}</span></div>
+        <div class="stat-e">${st.eff(v)}</div>
+        <div class="stat-v">수련 ${lv} / 상한 ${cap}${M.base[st.id] ? ' · 바탕 +' + M.base[st.id] : ''}</div>
+      </div>
+      <div class="stat-b">
+        <button class="btn" data-s="${st.id}" data-n="1" ${!atCap && M.qi >= c1 ? '' : 'disabled'}>+1</button>
+        <div class="cost">${atCap ? '상한' : fmt(c1)}</div>
+        <button class="btn" data-s="${st.id}" data-n="10" ${!atCap && M.qi >= c10 ? '' : 'disabled'}>+10</button>
+        <div class="cost">${atCap ? '—' : fmt(c10)}</div>
+      </div>`;
+    stl.appendChild(row);
+  }
+  stl.querySelectorAll('button[data-s]').forEach(b => b.onclick = () => buyStat(b.dataset.s, +b.dataset.n));
+
+  // ── 경지
+  const req = realmReq(M.realm), ok = canBreak();
+  const nx = realmName(M.realm + 1);
+  $('realm-box').innerHTML = `
+    <div class="row"><span class="hanja" style="font-size:26px">${rn.n}</span>
+      <span style="font-size:12px;color:var(--ink-soft)">${rn.h}</span></div>
+    <div class="note" style="margin:5px 0 9px">${rn.d}</div>
+    <div class="kv"><span>능력치 상한</span><span>${statCap(M.realm)}</span></div>
+    <div class="kv"><span>다음 경지</span><span>${nx.n} ${nx.h}</span></div>
+    <div class="kv"><span>필요 명성</span><span style="color:${ok ? '#2a6a3a' : '#7a2a2a'}">${fmt(M.fame)} / ${fmt(req)}</span></div>
+    <button class="btn ${ok ? 'gold' : ''}" id="btn-break" style="margin-top:8px" ${ok ? '' : 'disabled'}>
+      ${ok ? '경지를 돌파한다' : '아직 벽을 넘지 못한다'}</button>`;
+  $('btn-break').onclick = doBreak;
+  $('grade-note').innerHTML = Object.values(GRADES).filter(g => g.realm < 99).map(g =>
+    `<span style="color:${M.realm >= g.realm ? g.color : 'var(--ink-soft)'};opacity:${M.realm >= g.realm ? 1 : 0.45}">` +
+    `${g.n}${M.realm >= g.realm ? '' : '(' + realmName(g.realm).h + ')'}</span>`).join(' · ') +
+    `<br><span class="note">절세(絕世) 무공은 등급으로 얻지 않는다 — 대성한 초식과 심법이 맞물릴 때만 진화한다.</span>`;
+
+  // ── 도(서열·씨앗·기록)
+  const mine = myRank();
+  $('rank-self').innerHTML = `<div class="row">
+      <span class="hanja" style="font-size:26px;color:var(--plum-dark)">${mine.n}</span>
+      <span style="font-size:13px;font-weight:600">${mine.h}</span>
+      <span style="margin-left:auto;font-size:11px">격파 ${M.thrones}</span></div>
+    <div class="note" style="margin-top:5px">${mine.d}</div>`;
+  const rl = $('rank-list');
+  rl.innerHTML = '';
+  const start = Math.max(0, M.thrones - 2);
+  for (let i = start; i < M.thrones + 3; i++) {
+    const th = throneAt(i), rq = throneReq(i), beaten = i < M.thrones, next = i === M.thrones;
+    const f = FACTIONS[th.faction];
+    const row = document.createElement('div');
+    row.className = 'rank-row' + (beaten ? ' dead' : '');
+    row.innerHTML = `<div class="rank-g hanja" style="color:${f.color}">${th.n.slice(0, 1)}</div>
+      <div class="rank-main">
+        <div class="rk-n">${th.n} <span style="font-weight:400">${th.h}</span></div>
+        <div class="rk-t">${th.t} · ${f.h}</div>
+        ${next ? `<div class="rk-r">명성 ${fmt(M.fame)}/${fmt(rq.fame)} · 경지 ${realmName(M.realm).h}/${realmName(rq.realm).h}</div>` : ''}
+      </div>
+      ${next ? `<button class="btn sm ${M.fame >= rq.fame && M.realm >= rq.realm ? 'primary' : ''}" data-th="${i}">도전</button>` : ''}`;
+    rl.appendChild(row);
+  }
+  rl.querySelectorAll('button[data-th]').forEach(b => b.onclick = () => challengeThrone(+b.dataset.th));
+
+  const gain = rebirthGain();
+  $('rebirth-box').innerHTML = `<div class="note">화경(化境) 이후, 스스로를 버려 다시 태어날 수 있다. 경지와 능력치는 사라지고 <b>도(道)의 씨앗</b>이 남는다.</div>
+    <div class="kv" style="margin-top:7px"><span>이번에 얻을 씨앗</span><span>${canRebirth() ? fmt(gain) : '— (화경 필요)'}</span></div>
+    <button class="btn ${canRebirth() ? 'primary' : ''}" id="btn-rebirth" style="margin-top:8px" ${canRebirth() ? '' : 'disabled'}>환골탈태</button>`;
+  $('btn-rebirth').onclick = doRebirth;
+
+  const sdl = $('seed-list');
+  sdl.innerHTML = '';
+  for (const [k, s] of Object.entries(SEEDS)) {
+    const lv = M.seeds[k] || 0, cost = seedCost(k, lv);
+    const row = document.createElement('div');
+    row.className = 'stat-row';
+    row.innerHTML = `<div class="stat-g hanja">${s.g}</div>
+      <div class="stat-m">
+        <div class="stat-n">${s.h} <span style="font-weight:400;color:var(--ink-soft)">${lv}단</span></div>
+        <div class="stat-v">${s.d}</div>
+        <div class="stat-e">${s.txt(lv)}</div>
+      </div>
+      <div class="stat-b">
+        <button class="btn" data-sd="${k}" ${M.seedPoints >= cost ? '' : 'disabled'}>기른다</button>
+        <div class="cost">씨앗 ${fmt(cost)}</div>
+      </div>`;
+    sdl.appendChild(row);
+  }
+  sdl.querySelectorAll('button[data-sd]').forEach(b => b.onclick = () => {
+    const k = b.dataset.sd, lv = M.seeds[k] || 0, cost = seedCost(k, lv);
+    if (M.seedPoints < cost) return;
+    M.seedPoints -= cost; M.seeds[k] = lv + 1;
+    toast(SEEDS[k].h + ' → ' + (lv + 1) + '단', 'good');
+    Sound.play('insight');
+    saveMeta(); renderHub();
+  });
+
+  const bt = Object.entries(M.bestTime).map(([id, t]) => {
+    const s = STAGES.find(x => x.id === id);
+    return s ? s.h + ' ' + mmss(t) : null;
+  }).filter(Boolean).join(' · ');
+  $('record-box').innerHTML =
+    `<div class="kv"><span>출전</span><span>${M.runs}회 · 평정 ${M.wins}회</span></div>` +
+    `<div class="kv"><span>최고 승천 클리어</span><span>${M.maxAscEver}</span></div>` +
+    `<div class="kv"><span>최다 참살</span><span>${fmt(M.bestKills)}체</span></div>` +
+    `<div class="kv"><span>최고 경지</span><span>${realmName(M.bestRealmEver).h}</span></div>` +
+    `<div class="kv"><span>누적 명성</span><span>${fmt(M.totalFame)}</span></div>` +
+    `<div class="kv"><span>회귀</span><span>${M.rebirths}회</span></div>` +
+    (bt ? `<div class="note" style="margin-top:6px">최장 생존 — ${bt}</div>` : '');
+}
+function buyStat(id, n) {
+  const cap = statCap(M.realm);
+  let bought = 0;
+  for (let i = 0; i < n; i++) {
+    if (M.stats[id] >= cap) break;
+    const c = statCost(M.stats[id]);
+    if (M.qi < c) break;
+    M.qi -= c; M.stats[id]++; bought++;
+  }
+  if (bought) { saveMeta(); renderHub(); }
+  else if (M.stats[id] >= cap) toast('상한이다. 경지를 돌파해야 더 오른다.');
+}
+
+/* ============================================================
+ *  27. 미션 브리핑
+ * ============================================================ */
+let briefIdx = 0;
+function enterBrief(i) {
+  const lim = ascLimit(i);
+  if (selAsc > lim) { selAsc = lim; toast('이 권역은 승천 ' + lim + '까지만 허락된다.'); }
+  briefIdx = i;
+  const s = STAGES[i], f = FACTIONS[s.faction], lo = loadout();
+  $('bf-glyph').textContent = s.g;
+  $('bf-glyph').style.color = f.color;
+  $('bf-name').textContent = s.h;
+  $('bf-faction').textContent = f.g + ' ' + f.h + ' · ' + f.lore;
+  $('bf-asc').textContent = '昇天 ' + hanjaNum(selAsc);
+  $('bf-desc').textContent = s.d;
+  $('bf-main').innerHTML = `<div class="mi"><span class="mk"></span><span>${mainLabel(i)}</span></div>` +
+    `<div class="note" style="margin-top:5px">${ASCENSIONS[selAsc]}</div>`;
+  const done = M.stageSubs[s.id] || {};
+  $('bf-sub').innerHTML = stageSubs(i).map(x =>
+    `<div class="mi ${done[x.id] ? 'done' : ''}"><span class="mk"></span><span>${x.label}${done[x.id] ? ' <span style="color:var(--gold-dark)">(이미 달성)</span>' : ' <span style="color:var(--ink-soft)">씨앗 +1</span>'}</span></div>`).join('');
+  const mods = ascMods(selAsc);
+  $('bf-stats').innerHTML =
+    `<div class="kv"><span>命 (최대 생명)</span><span>${fmt(Math.round(lo.hpMax * Math.max(0.3, mods.startHp)))}</span></div>` +
+    `<div class="kv"><span>무공 피해</span><span>×${lo.dmgMult.toFixed(2)}</span></div>` +
+    `<div class="kv"><span>쿨다운</span><span>×${lo.cdMult.toFixed(2)}${lo.countBonus ? ' · 투사체 +' + lo.countBonus : ''}</span></div>` +
+    `<div class="kv"><span>이동 · 회피</span><span>${Math.round(lo.moveSpd)} · ${pct(lo.dodge)}</span></div>` +
+    `<div class="kv"><span>피해감소</span><span>${pct(lo.dr)}</span></div>` +
+    `<div class="kv"><span>흡수 반경 · 경험</span><span>${Math.round(lo.pickup * mods.pickup)} · ×${lo.xpMult.toFixed(2)}</span></div>` +
+    `<div class="kv"><span>입문 초식</span><span>${ARTS[SECTS[M.sect].startCho].h}</span></div>` +
+    (lo.startLevel > 1 ? `<div class="kv"><span>시작 레벨</span><span>Lv.${lo.startLevel}</span></div>` : '') +
+    (mods.curse ? `<div class="kv"><span style="color:#7a2a2a">내상</span><span>초식 자리 ${mods.curse}칸 봉인</span></div>` : '');
+  showScreen('s-brief');
+}
+
+/* ============================================================
+ *  28. 부트 · 메인 루프
+ * ============================================================ */
+function drawIdle() {
+  g2.setTransform(DPR, 0, 0, DPR, 0, 0);
+  g2.fillStyle = '#14100c'; g2.fillRect(0, 0, VW, VH);
+  if (!groundPat) { groundPat = makeGround(STAGES[0]); groundFor = 0; }
+  g2.globalAlpha = 0.5; g2.fillStyle = groundPat; g2.fillRect(0, 0, VW, VH); g2.globalAlpha = 1;
+  const vg = g2.createRadialGradient(VW / 2, VH / 2, Math.min(VW, VH) * 0.25, VW / 2, VH / 2, Math.max(VW, VH) * 0.7);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.75)');
+  g2.fillStyle = vg; g2.fillRect(0, 0, VW, VH);
+}
+
+function goHub() {
+  showScreen('s-hub');
+  showRumor();
+  renderHub();
+  R = null;
+  document.getElementById('hud').classList.remove('on');
+  document.getElementById('hud-arts').classList.remove('on');
+  document.getElementById('pause-btn').classList.remove('on');
+}
+
+function boot() {
+  resize();
+  buildSectGrid();
+  doRoll();
+
+  $('btn-reroll').onclick = () => { doRoll(); Sound.unlock(); };
+  $('btn-begin').onclick = () => {
+    if (!selSect) { toast('문파를 고르시오.'); return; }
+    const nm = ($('name-input').value || '').trim() || '무명';
+    const saved = storeGet();
+    const carry = saved ? {
+      seeds: saved.seeds || {}, seedPoints: saved.seedPoints || 0, rebirths: saved.rebirths || 0,
+      totalFame: saved.totalFame || 0, bestRealmEver: saved.bestRealmEver || 0, maxAscEver: saved.maxAscEver || 0,
+    } : null;
+    M = newMeta(nm, roll.origin, roll.talent, selSect, carry);
+    saveMeta();
+    Sound.unlock();
+    openModal(SECTS[selSect].n.slice(0, 1), '無名行 · 첫걸음',
+      `${SECTS[selSect].intro}<br><br><span class="note">아직 이름 없는 자의 갈망. 무(武)를 향한 허기가 그대를 강호로 떠민다.</span><br><br>` +
+      `<span class="em">움직이는 것만 그대의 몫이다</span> — 초식은 스스로 펼쳐진다.<br>` +
+      `적을 베어 기(氣)를 모으고, 깨달음마다 한 갈래를 고른다.<br>` +
+      `관문을 넘으면 <span class="em">진기</span>와 <span class="em">명성</span>이 남고, 그것으로 능력치와 경지를 올린다 — 그 위에 또 하늘이 있다.`,
+      [{ label: '길을 나선다', cb: () => { closeModal(); goHub(); } }]);
+  };
+
+  document.querySelectorAll('.hb-tab').forEach(b => b.onclick = () => {
+    hubTab = b.dataset.t;
+    document.querySelectorAll('.hb-tab').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    document.querySelectorAll('.hb-panel').forEach(p => p.classList.remove('on'));
+    $('hp-' + hubTab).classList.add('on');
+  });
+  $('asc-range').oninput = e => {
+    selAsc = +e.target.value;
+    $('asc-num').textContent = hanjaNum(selAsc);
+    $('asc-desc').textContent = ASCENSIONS[selAsc];
+  };
+  $('btn-brief-back').onclick = () => { showScreen('s-hub'); renderHub(); };
+  $('btn-enter').onclick = () => { startRun(briefIdx, selAsc); };
+  $('pause-btn').onclick = togglePause;
+  $('btn-resume').onclick = togglePause;
+  $('btn-giveup').onclick = () => { R.paused = false; endRun(false); };
+  $('btn-lv-skip').onclick = () => { R.skips++; healPlayer(R.hpMax * 0.15); closeLevelUp(); };
+  $('btn-result-ok').onclick = goHub;
+  $('btn-wipe').onclick = () => openModal('滅', '記錄을 지운다',
+    '모든 기록이 사라진다 — 씨앗과 회귀의 기억, 권역 평정 기록까지. 되돌릴 수 없다.',
+    [{ label: '지운다', cls: 'primary', cb: () => { storeClear(); location.reload(); } },
+     { label: '그만둔다', cb: closeModal }]);
+
+  const saved = loadMeta();
+  if (saved) {
+    const rn = realmName(saved.realm);
+    $('load-note').innerHTML = `이어갈 기록이 있다 — ${saved.name} · ${rn.h} · 평정 ${saved.wins}회`;
+    const b = document.createElement('button');
+    b.className = 'btn gold';
+    b.style.marginTop = '8px';
+    b.textContent = '이어서 걷는다';
+    b.onclick = () => { M = saved; Sound.unlock(); goHub(); };
+    $('load-note').appendChild(b);
+  }
+
+  let last = performance.now();
+  function frame(now) {
+    let dt = (now - last) / 1000;
+    last = now;
+    if (dt > 0.05) dt = 0.05;            // 탭 복귀 시 폭주 방지
+    if (dt < 0) dt = 0;
+    if (running && R && !R.paused && !lvOpen && !R.over) {
+      stepRun(dt * (window.__TS || 1));
+      updateHud(dt);
+    }
+    if (R) draw(); else drawIdle();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  window.addEventListener('beforeunload', saveMeta);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { saveMeta(); if (running && R && !R.over && !R.paused && !lvOpen) togglePause(); }
+  });
+
+  // 검증용 창구 — 헤드리스 테스트에서 상태를 들여다본다
+  window.__hyeollo = {
+    get M() { return M; }, get R() { return R; },
+    TUNE, STAGES, ARTS, EVOLUTIONS, ascMods, loadout, startRun, endRun, goHub, draw,
+    get lvOpen() { return lvOpen; },
+    stepRun: dt => stepRun(dt),
+    pools: { enemy: P_ENEMY, bullet: P_BULLET, gem: P_GEM, field: P_FIELD },
+    counts: () => ({
+      enemies: P_ENEMY.a.filter(o => o.alive).length,
+      bullets: P_BULLET.a.filter(o => o.alive).length,
+      gems: P_GEM.a.filter(o => o.alive).length,
+      fields: P_FIELD.a.filter(o => o.alive).length,
+    }),
+  };
+}
+boot();
+</script>
+</body>
+</html>
